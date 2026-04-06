@@ -3,54 +3,61 @@ import {
     ConfigModule,
     CONFIG_MODULES,
     DeviceInfo,
-    Manifest,
-    MANIFEST_PATH,
     Profile,
     ProfileMeta,
     PROFILES_DIR,
     SaveProfileOptions,
 } from "./types";
-import { getConf, getFile, putFile, removeFile, setConfModule } from "./siyuan-api";
+import { getConf, getFile, putFile, readDir, removeFile, setConfModule } from "./siyuan-api";
 import { detectPlatform, getDeviceName } from "../utils/platform";
 import { generateUUID } from "../utils/uuid";
 
 /**
  * ConfigManager handles all CRUD operations for configuration profiles.
- * Profiles are stored as JSON files under data/public/settings-sync/ and
- * synced across devices via SiYuan's built-in cloud sync.
+ * Profiles are stored as individual JSON files under data/public/settings-sync/profiles/
+ * and discovered by scanning the directory (no manifest index file).
+ * This avoids sync conflicts when multiple devices modify profiles concurrently.
  */
 export class ConfigManager {
-    private manifest: Manifest | null = null;
+    /** In-memory cache of profile metadata, populated by scanProfiles() */
+    private profilesCache: ProfileMeta[] = [];
 
-    /** Initialize the config manager, loading or creating the manifest */
+    /** Initialize the config manager by scanning profiles directory */
     async init(): Promise<void> {
-        await this.loadManifest();
+        await this.scanProfiles();
     }
 
-    /** Load the manifest from disk, or create a new one if it doesn't exist */
-    private async loadManifest(): Promise<void> {
-        const data = await getFile(MANIFEST_PATH);
-        if (data && typeof data === "object" && data.version) {
-            this.manifest = data as Manifest;
-        } else {
-            this.manifest = { version: 1, profiles: [] };
-            await this.saveManifest();
-        }
-    }
+    /**
+     * Scan the profiles directory and read metadata from each profile file.
+     * This replaces the manifest-based approach to avoid sync conflicts.
+     */
+    private async scanProfiles(): Promise<void> {
+        const entries = await readDir(PROFILES_DIR);
+        const profiles: ProfileMeta[] = [];
 
-    /** Persist the manifest to disk */
-    private async saveManifest(): Promise<void> {
-        if (this.manifest) {
-            await putFile(MANIFEST_PATH, this.manifest);
+        for (const entry of entries) {
+            if (entry.isDir || !entry.name.endsWith(".json")) {
+                continue;
+            }
+
+            try {
+                const path = `${PROFILES_DIR}/${entry.name}`;
+                const data = await getFile(path);
+                if (data && typeof data === "object" && data.id && data.meta) {
+                    profiles.push(data.meta as ProfileMeta);
+                }
+            } catch {
+                // Skip files that can't be read or parsed
+                continue;
+            }
         }
+
+        this.profilesCache = profiles;
     }
 
     /** Get the list of all saved profile metadata */
     async listProfiles(): Promise<ProfileMeta[]> {
-        if (!this.manifest) {
-            await this.loadManifest();
-        }
-        return this.manifest!.profiles;
+        return this.profilesCache;
     }
 
     /** Read a full profile (with config data) by ID */
@@ -112,15 +119,11 @@ export class ConfigManager {
 
         const profile: Profile = { id, meta, conf };
 
-        // Write the profile file
+        // Write the profile file (no manifest needed)
         await putFile(`${PROFILES_DIR}/${id}.json`, profile);
 
-        // Update manifest
-        if (!this.manifest) {
-            this.manifest = { version: 1, profiles: [] };
-        }
-        this.manifest.profiles.push(meta);
-        await this.saveManifest();
+        // Update in-memory cache
+        this.profilesCache.push(meta);
 
         return meta;
     }
@@ -162,13 +165,10 @@ export class ConfigManager {
 
         await putFile(`${PROFILES_DIR}/${profileId}.json`, profile);
 
-        // Update manifest
-        if (this.manifest) {
-            const idx = this.manifest.profiles.findIndex((p) => p.id === profileId);
-            if (idx >= 0) {
-                this.manifest.profiles[idx] = { ...profile.meta };
-            }
-            await this.saveManifest();
+        // Update in-memory cache
+        const idx = this.profilesCache.findIndex((p) => p.id === profileId);
+        if (idx >= 0) {
+            this.profilesCache[idx] = { ...profile.meta };
         }
     }
 
@@ -182,12 +182,10 @@ export class ConfigManager {
         profile.meta.name = newName;
         await putFile(`${PROFILES_DIR}/${profileId}.json`, profile);
 
-        if (this.manifest) {
-            const idx = this.manifest.profiles.findIndex((p) => p.id === profileId);
-            if (idx >= 0) {
-                this.manifest.profiles[idx].name = newName;
-            }
-            await this.saveManifest();
+        // Update in-memory cache
+        const idx = this.profilesCache.findIndex((p) => p.id === profileId);
+        if (idx >= 0) {
+            this.profilesCache[idx].name = newName;
         }
     }
 
@@ -195,10 +193,8 @@ export class ConfigManager {
     async deleteProfile(profileId: string): Promise<void> {
         await removeFile(`${PROFILES_DIR}/${profileId}.json`);
 
-        if (this.manifest) {
-            this.manifest.profiles = this.manifest.profiles.filter((p) => p.id !== profileId);
-            await this.saveManifest();
-        }
+        // Update in-memory cache
+        this.profilesCache = this.profilesCache.filter((p) => p.id !== profileId);
     }
 
     /**
@@ -206,7 +202,6 @@ export class ConfigManager {
      * Used before applying another profile's settings.
      */
     async createAutoBackup(backupNamePrefix: string): Promise<ProfileMeta> {
-        // Slice ISO string to "YYYY-MM-DDTHH-MM-SS" (19 chars) for a readable timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
         return this.saveProfile({
             name: `${backupNamePrefix} - ${timestamp}`,
@@ -216,8 +211,8 @@ export class ConfigManager {
         });
     }
 
-    /** Force reload the manifest from disk */
+    /** Force re-scan profiles from disk */
     async refresh(): Promise<void> {
-        await this.loadManifest();
+        await this.scanProfiles();
     }
 }

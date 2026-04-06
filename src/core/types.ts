@@ -37,7 +37,7 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
     docker: "Docker",
 };
 
-/** Metadata for a saved profile (stored in manifest and profile files) */
+/** Metadata for a saved profile (embedded in each profile JSON file) */
 export interface ProfileMeta {
     id: string;
     name: string;
@@ -54,12 +54,6 @@ export interface Profile {
     id: string;
     meta: ProfileMeta;
     conf: Partial<Record<ConfigModule, any>>;
-}
-
-/** The manifest file that indexes all profiles */
-export interface Manifest {
-    version: number;
-    profiles: ProfileMeta[];
 }
 
 /** Device information for the current client */
@@ -80,5 +74,4 @@ export interface SaveProfileOptions {
 
 /** Base path for settings sync data in SiYuan's data directory */
 export const SYNC_BASE_PATH = "/data/public/settings-sync";
-export const MANIFEST_PATH = `${SYNC_BASE_PATH}/manifest.json`;
 export const PROFILES_DIR = `${SYNC_BASE_PATH}/profiles`;

@@ -72,6 +72,29 @@ export function putFile(path: string, content: any): Promise<void> {
     });
 }
 
+/** Directory entry returned by /api/file/readDir */
+export interface DirEntry {
+    name: string;
+    isDir: boolean;
+}
+
+/** List files in a directory. Returns an array of entries, or empty array if dir doesn't exist. */
+export function readDir(path: string): Promise<DirEntry[]> {
+    return new Promise((resolve, reject) => {
+        fetchPost("/api/file/readDir", { path }, (response: any) => {
+            if (response && response.code === 404) {
+                resolve([]);
+            } else if (response && response.code && response.code !== 0) {
+                reject(new Error(response.msg || "Failed to read directory"));
+            } else if (response && response.data) {
+                resolve(response.data as DirEntry[]);
+            } else {
+                resolve([]);
+            }
+        });
+    });
+}
+
 /** Remove a file from SiYuan's data directory */
 export function removeFile(path: string): Promise<void> {
     return new Promise((resolve, reject) => {
