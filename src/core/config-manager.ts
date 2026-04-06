@@ -11,6 +11,7 @@ import {
 import { getConf, getFile, putFile, readDir, removeFile, setConfModule } from "./siyuan-api";
 import { detectPlatform, getDeviceName } from "../utils/platform";
 import { generateUUID } from "../utils/uuid";
+import { filterCustomKeymap, isSparseKeymap, mergeKeymap } from "../utils/keymap";
 
 /**
  * ConfigManager handles all CRUD operations for configuration profiles.
@@ -80,9 +81,23 @@ export class ConfigManager {
         };
     }
 
-    /** Get the current SiYuan configuration for the specified modules (public for preview/diff) */
-    async getCurrentConf(modules: ConfigModule[]): Promise<Partial<Record<ConfigModule, any>>> {
-        return this.captureCurrentConf(modules);
+    /**
+     * Get the current SiYuan configuration for the specified modules (public for preview/diff).
+     * If filterKeymap is true (default), keymap data is filtered to only show customized bindings.
+     */
+    async getCurrentConf(modules: ConfigModule[], filterKeymap: boolean = true): Promise<Partial<Record<ConfigModule, any>>> {
+        const confData = await getConf();
+        const conf: Partial<Record<ConfigModule, any>> = {};
+        for (const mod of modules) {
+            if (confData.conf && confData.conf[mod] !== undefined) {
+                let modData = JSON.parse(JSON.stringify(confData.conf[mod]));
+                if (filterKeymap && mod === "keymap") {
+                    modData = filterCustomKeymap(modData);
+                }
+                conf[mod] = modData;
+            }
+        }
+        return conf;
     }
 
     /** Capture current SiYuan configuration for the specified modules */
@@ -91,7 +106,12 @@ export class ConfigManager {
         const conf: Partial<Record<ConfigModule, any>> = {};
         for (const mod of modules) {
             if (confData.conf && confData.conf[mod] !== undefined) {
-                conf[mod] = JSON.parse(JSON.stringify(confData.conf[mod]));
+                let modData = JSON.parse(JSON.stringify(confData.conf[mod]));
+                // For keymap, only save user-customized bindings (filter out defaults)
+                if (mod === "keymap") {
+                    modData = filterCustomKeymap(modData);
+                }
+                conf[mod] = modData;
             }
         }
         return conf;
@@ -137,7 +157,18 @@ export class ConfigManager {
 
         for (const mod of modules) {
             if (profile.conf[mod] !== undefined) {
-                await setConfModule(mod, profile.conf[mod]);
+                let dataToApply = profile.conf[mod];
+
+                // For keymap: if the saved profile only contains customizations (sparse),
+                // merge them into the current full keymap instead of replacing everything
+                if (mod === "keymap" && isSparseKeymap(dataToApply)) {
+                    const confData = await getConf();
+                    if (confData.conf && confData.conf.keymap) {
+                        dataToApply = mergeKeymap(confData.conf.keymap, dataToApply);
+                    }
+                }
+
+                await setConfModule(mod, dataToApply);
             }
         }
     }
