@@ -1,12 +1,13 @@
 import { getBackend, getFrontend } from "siyuan";
-import { Platform } from "../core/types";
+import { Platform, PLATFORM_LABELS } from "../core/types";
 
 /**
  * Detect the current platform from SiYuan's backend identifier.
  */
 export function detectPlatform(): Platform {
     const backend = getBackend();
-    const knownPlatforms: Platform[] = ["windows", "darwin", "linux", "android", "ios", "harmony", "docker"];
+    // Derive known platforms from PLATFORM_LABELS to stay in sync with type definitions
+    const knownPlatforms = Object.keys(PLATFORM_LABELS).filter((k) => k !== "all") as Platform[];
     if (knownPlatforms.includes(backend as Platform)) {
         return backend as Platform;
     }

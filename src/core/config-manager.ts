@@ -201,6 +201,7 @@ export class ConfigManager {
      * Used before applying another profile's settings.
      */
     async createAutoBackup(backupNamePrefix: string): Promise<ProfileMeta> {
+        // Slice ISO string to "YYYY-MM-DDTHH-MM-SS" (19 chars) for a readable timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
         return this.saveProfile({
             name: `${backupNamePrefix} - ${timestamp}`,

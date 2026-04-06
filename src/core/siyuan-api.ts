@@ -32,12 +32,13 @@ export function setConfModule(module: ConfigModule, data: any): Promise<void> {
     });
 }
 
-/** Read a JSON file from SiYuan's data directory */
+/** Read a JSON file from SiYuan's data directory. Returns parsed JSON on success, or null if not found. */
 export function getFile(path: string): Promise<any> {
     return new Promise((resolve, reject) => {
         fetchPost("/api/file/getFile", { path }, (response: any) => {
-            // getFile returns the file content directly when successful,
-            // or an error object { code: 404, ... } when file doesn't exist
+            // getFile returns the parsed file content on success,
+            // or an object with { code: 404 } when the file doesn't exist,
+            // or { code: <non-zero> } for other errors.
             if (response && response.code === 404) {
                 resolve(null);
             } else if (response && response.code && response.code !== 0) {
