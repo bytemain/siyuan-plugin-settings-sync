@@ -73,6 +73,11 @@ export class ConfigManager {
         };
     }
 
+    /** Get the current SiYuan configuration for the specified modules (public for preview/diff) */
+    async getCurrentConf(modules: ConfigModule[]): Promise<Partial<Record<ConfigModule, any>>> {
+        return this.captureCurrentConf(modules);
+    }
+
     /** Capture current SiYuan configuration for the specified modules */
     private async captureCurrentConf(modules: ConfigModule[]): Promise<Partial<Record<ConfigModule, any>>> {
         const confData = await getConf();

@@ -5,6 +5,7 @@ import { detectPlatform } from "../utils/platform";
 import { renderProfileCard } from "./profile-card";
 import { openSaveDialog } from "./save-dialog";
 import { openApplyDialog } from "./apply-dialog";
+import { openPreviewDialog } from "./preview-dialog";
 
 /**
  * Open the main "Settings Sync Manager" dialog.
@@ -99,6 +100,9 @@ export function openMainDialog(
                 if (!id) return;
 
                 switch (action) {
+                    case "preview":
+                        await handlePreview(id);
+                        break;
                     case "apply":
                         await handleApply(id);
                         break;
@@ -114,6 +118,14 @@ export function openMainDialog(
                 }
             });
         });
+    };
+
+    const handlePreview = async (profileId: string) => {
+        const profiles = await configManager.listProfiles();
+        const profile = profiles.find((p) => p.id === profileId);
+        if (!profile) return;
+
+        openPreviewDialog(configManager, profile, i18n);
     };
 
     const handleApply = async (profileId: string) => {

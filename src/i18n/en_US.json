@@ -53,5 +53,18 @@
     "applyFailed": "Apply failed",
     "updateFailed": "Update failed",
     "deleteFailed": "Delete failed",
-    "renameFailed": "Rename failed"
+    "renameFailed": "Rename failed",
+    "preview": "Preview",
+    "previewTitle": "Preview & Compare",
+    "profileNotFound": "Profile not found",
+    "noModulesInProfile": "This profile contains no configuration modules.",
+    "previewFailed": "Failed to load preview",
+    "noDifferences": "No differences — profile matches current settings.",
+    "diffKey": "Setting",
+    "diffCurrent": "Current",
+    "diffProfile": "Profile",
+    "diffChanged": "changed",
+    "diffAdded": "added",
+    "diffRemoved": "removed",
+    "diffUnchanged": "unchanged"
 }

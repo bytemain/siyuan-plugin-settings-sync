@@ -53,5 +53,18 @@
     "applyFailed": "应用失败",
     "updateFailed": "更新失败",
     "deleteFailed": "删除失败",
-    "renameFailed": "重命名失败"
+    "renameFailed": "重命名失败",
+    "preview": "预览",
+    "previewTitle": "预览与对比",
+    "profileNotFound": "找不到该配置",
+    "noModulesInProfile": "该配置不包含任何模块。",
+    "previewFailed": "加载预览失败",
+    "noDifferences": "无差异 — 配置与当前设置完全一致。",
+    "diffKey": "设置项",
+    "diffCurrent": "当前值",
+    "diffProfile": "配置值",
+    "diffChanged": "项已更改",
+    "diffAdded": "项新增",
+    "diffRemoved": "项已移除",
+    "diffUnchanged": "项相同"
 }

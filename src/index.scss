@@ -224,4 +224,189 @@
   &__error {
     color: var(--b3-card-error-color, #dc3545);
   }
+
+  // Preview & Diff dialog styles
+  &__preview-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px;
+    max-height: 70vh;
+  }
+
+  &__preview-loading {
+    text-align: center;
+    padding: 24px;
+    color: var(--b3-theme-on-surface-light);
+  }
+
+  &__preview-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--b3-border-color);
+    padding-bottom: 8px;
+  }
+
+  &__preview-tab {
+    background: transparent;
+    border: 1px solid var(--b3-border-color);
+    border-radius: 4px 4px 0 0;
+    padding: 4px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--b3-theme-on-surface-light);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+      background: var(--b3-theme-surface);
+    }
+
+    &--active {
+      background: var(--b3-theme-surface);
+      color: var(--b3-theme-on-surface);
+      font-weight: 600;
+      border-bottom-color: var(--b3-theme-surface);
+    }
+  }
+
+  &__preview-tab-badge {
+    display: inline-block;
+    min-width: 18px;
+    text-align: center;
+    border-radius: 9px;
+    padding: 0 5px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    background: var(--b3-card-warning-background, #fff3cd);
+    color: var(--b3-card-warning-color, #856404);
+
+    &--ok {
+      background: var(--b3-card-success-background, #d4edda);
+      color: var(--b3-card-success-color, #155724);
+    }
+  }
+
+  &__preview-content {
+    overflow: auto;
+    max-height: 55vh;
+  }
+
+  &__diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: var(--b3-font-family-code, "JetBrains Mono", monospace);
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--b3-theme-background);
+      text-align: left;
+      padding: 6px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--b3-theme-on-surface-light);
+      border-bottom: 2px solid var(--b3-border-color);
+    }
+
+    td {
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--b3-border-color);
+      vertical-align: top;
+      word-break: break-all;
+      max-width: 240px;
+    }
+  }
+
+  &__diff-key {
+    color: var(--b3-theme-on-surface);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+
+  &__diff-arrow {
+    text-align: center;
+    width: 24px;
+    color: var(--b3-theme-on-surface-light);
+  }
+
+  &__diff-val {
+    &--old {
+      color: var(--b3-card-error-color, #dc3545);
+      background: var(--b3-card-error-background, #f8d7da);
+      border-radius: 2px;
+      padding: 1px 4px;
+    }
+
+    &--new {
+      color: var(--b3-card-success-color, #155724);
+      background: var(--b3-card-success-background, #d4edda);
+      border-radius: 2px;
+      padding: 1px 4px;
+    }
+  }
+
+  &__diff-row {
+    &--changed td:first-child {
+      border-left: 3px solid var(--b3-card-warning-color, #856404);
+    }
+
+    &--added td:first-child {
+      border-left: 3px solid var(--b3-card-success-color, #155724);
+    }
+
+    &--removed td:first-child {
+      border-left: 3px solid var(--b3-card-error-color, #dc3545);
+    }
+  }
+
+  &__diff-summary {
+    display: flex;
+    gap: 8px;
+    padding: 8px 0;
+    flex-wrap: wrap;
+  }
+
+  &__diff-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+
+    &--changed {
+      background: var(--b3-card-warning-background, #fff3cd);
+      color: var(--b3-card-warning-color, #856404);
+    }
+
+    &--added {
+      background: var(--b3-card-success-background, #d4edda);
+      color: var(--b3-card-success-color, #155724);
+    }
+
+    &--removed {
+      background: var(--b3-card-error-background, #f8d7da);
+      color: var(--b3-card-error-color, #dc3545);
+    }
+
+    &--unchanged {
+      background: var(--b3-theme-surface);
+      color: var(--b3-theme-on-surface-light);
+    }
+  }
+
+  &__diff-identical {
+    text-align: center;
+    padding: 24px;
+    color: var(--b3-card-success-color, #155724);
+    font-size: 14px;
+  }
 }
