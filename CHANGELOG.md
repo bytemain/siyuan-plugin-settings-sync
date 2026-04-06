@@ -1,12 +1,16 @@
 # Changelog
 
-## v0.4.7
+## v0.1.0
 
-* [Improve the dock panel title and tooltips](https://github.com/siyuan-note/siyuan/issues/17366)
-
-## v0.4.6 2026-03-11
-
-* [Improve error handling and security for plugin data storage methods](https://github.com/siyuan-note/siyuan/pull/16717)
+* Initial release of Settings Sync plugin
+* Save current SiYuan configuration as named profiles
+* Apply saved profiles to replicate settings across devices
+* Platform-tagged profiles with cross-platform compatibility warnings
+* Selective module sync (editor, keymap, appearance, fileTree, search, tag, export, flashcard)
+* Automatic backup before applying profiles
+* Rename, update, and delete profiles
+* Filter profiles by platform
+* Multi-language support (English, Chinese)
 
 ## v0.4.5 2025-12-27
 
