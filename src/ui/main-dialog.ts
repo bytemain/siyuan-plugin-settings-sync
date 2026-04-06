@@ -7,6 +7,7 @@ import { renderProfileCard } from "./profile-card";
 import { openSaveDialog } from "./save-dialog";
 import { openApplyDialog } from "./apply-dialog";
 import { openPreviewDialog } from "./preview-dialog";
+import { openSettingsDialog } from "./settings-dialog";
 
 /**
  * Open the main "Settings Sync Manager" dialog.
@@ -38,6 +39,7 @@ export function openMainDialog(
                 <div class="settings-sync__device-actions">
                     <button class="b3-button b3-button--text" data-action="save-new">📤 ${i18n.saveConfig || "Save Current Config"}</button>
                     <button class="b3-button b3-button--text" data-action="open-folder">📂 ${i18n.openFolder || "Open Folder"}</button>
+                    <button class="b3-button b3-button--text" data-action="open-settings">⚙️ ${i18n.settingsTitle || "Settings"}</button>
                 </div>
             </div>
             <div class="settings-sync__profiles-header">
@@ -217,6 +219,11 @@ export function openMainDialog(
     // Event: save new profile
     container.querySelector("[data-action=\"save-new\"]")?.addEventListener("click", () => {
         openSaveDialog(configManager, i18n, () => refreshList());
+    });
+
+    // Event: open plugin settings dialog
+    container.querySelector("[data-action=\"open-settings\"]")?.addEventListener("click", () => {
+        openSettingsDialog(configManager, i18n);
     });
 
     // Event: open profiles folder in system file manager

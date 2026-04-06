@@ -2,16 +2,20 @@ import { Constants } from "siyuan";
 import {
     ConfigModule,
     CONFIG_MODULES,
+    DEFAULT_SKIP_KEYS,
     DeviceInfo,
+    PluginSettings,
     Profile,
     ProfileMeta,
     PROFILES_DIR,
     SaveProfileOptions,
+    SETTINGS_FILE_PATH,
 } from "./types";
 import { getConf, getFile, putFile, readDir, removeFile, setConfModule } from "./siyuan-api";
 import { detectPlatform, getDeviceName } from "../utils/platform";
 import { generateUUID } from "../utils/uuid";
 import { filterCustomKeymap, isSparseKeymap, mergeKeymap } from "../utils/keymap";
+import { preserveLocalSkipKeys, stripSkipKeys } from "../utils/skip-keys";
 
 /**
  * ConfigManager handles all CRUD operations for configuration profiles.
@@ -23,9 +27,43 @@ export class ConfigManager {
     /** In-memory cache of profile metadata, populated by scanProfiles() */
     private profilesCache: ProfileMeta[] = [];
 
-    /** Initialize the config manager by scanning profiles directory */
+    /** Plugin settings (skip keys, etc.) */
+    private settings: PluginSettings = { skipKeys: [...DEFAULT_SKIP_KEYS] };
+
+    /** Initialize the config manager by loading settings and scanning profiles directory */
     async init(): Promise<void> {
+        await this.loadSettings();
         await this.scanProfiles();
+    }
+
+    // ── Settings persistence ──────────────────────────────────────
+
+    /** Load plugin settings from disk (merges with defaults) */
+    async loadSettings(): Promise<void> {
+        try {
+            const data = await getFile(SETTINGS_FILE_PATH);
+            if (data && typeof data === "object" && Array.isArray(data.skipKeys)) {
+                this.settings = { skipKeys: data.skipKeys };
+            }
+        } catch {
+            // Use defaults if settings file doesn't exist or can't be read
+        }
+    }
+
+    /** Persist current plugin settings to disk */
+    async saveSettings(): Promise<void> {
+        await putFile(SETTINGS_FILE_PATH, this.settings);
+    }
+
+    /** Get the current skip keys list */
+    getSkipKeys(): string[] {
+        return [...this.settings.skipKeys];
+    }
+
+    /** Replace the skip keys list and persist */
+    async setSkipKeys(keys: string[]): Promise<void> {
+        this.settings.skipKeys = keys;
+        await this.saveSettings();
     }
 
     /**
@@ -94,6 +132,8 @@ export class ConfigManager {
                 if (filterKeymap && mod === "keymap") {
                     modData = filterCustomKeymap(modData);
                 }
+                // Strip skip keys so preview/diff doesn't show machine-specific values
+                stripSkipKeys(modData, mod, this.settings.skipKeys);
                 conf[mod] = modData;
             }
         }
@@ -111,6 +151,8 @@ export class ConfigManager {
                 if (mod === "keymap") {
                     modData = filterCustomKeymap(modData);
                 }
+                // Remove machine-specific keys before saving
+                stripSkipKeys(modData, mod, this.settings.skipKeys);
                 conf[mod] = modData;
             }
         }
@@ -155,20 +197,26 @@ export class ConfigManager {
             throw new Error("Profile not found");
         }
 
+        // Fetch current conf once so we can preserve local skip-key values
+        const confData = await getConf();
         const errors: string[] = [];
 
         for (const mod of modules) {
             if (profile.conf[mod] !== undefined) {
                 try {
-                    let dataToApply = profile.conf[mod];
+                    let dataToApply = JSON.parse(JSON.stringify(profile.conf[mod]));
 
                     // For keymap: if the saved profile only contains customizations (sparse),
                     // merge them into the current full keymap instead of replacing everything
                     if (mod === "keymap" && isSparseKeymap(dataToApply)) {
-                        const confData = await getConf();
                         if (confData.conf && confData.conf.keymap) {
                             dataToApply = mergeKeymap(confData.conf.keymap, dataToApply);
                         }
+                    }
+
+                    // Preserve local values for machine-specific keys
+                    if (confData.conf && confData.conf[mod] != null) {
+                        preserveLocalSkipKeys(dataToApply, confData.conf[mod], mod, this.settings.skipKeys);
                     }
 
                     await setConfModule(mod, dataToApply);

@@ -68,5 +68,11 @@
     "diffUnchanged": "项相同",
     "openFolder": "打开文件夹",
     "openFolderFailed": "无法打开文件夹",
-    "storagePath": "存储路径"
+    "storagePath": "存储路径",
+    "settingsTitle": "插件设置",
+    "skipKeysLabel": "跳过的配置项（同步时排除）",
+    "skipKeysHelp": "此处列出的配置项在保存和应用配置时将被排除。格式为 <code>模块.属性</code>（如 <code>export.pandocBin</code>），每行一个。不同设备上的绝对路径等机器特定设置会导致同步出错。",
+    "resetDefaults": "恢复默认",
+    "settingsSaved": "设置已保存",
+    "settingsSaveFailed": "保存设置失败"
 }

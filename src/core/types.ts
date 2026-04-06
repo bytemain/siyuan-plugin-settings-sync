@@ -74,3 +74,20 @@ export interface SaveProfileOptions {
 /** Base path for settings sync data in SiYuan's data directory */
 export const SYNC_BASE_PATH = "/data/public/settings-sync";
 export const PROFILES_DIR = `${SYNC_BASE_PATH}/profiles`;
+export const SETTINGS_FILE_PATH = `${SYNC_BASE_PATH}/settings.json`;
+
+/**
+ * Default keys to skip during sync.
+ * These are machine-specific settings whose values (e.g. absolute paths)
+ * differ between devices and would cause errors if synced.
+ * Format: "module.property" (dot-separated path within module data).
+ */
+export const DEFAULT_SKIP_KEYS: string[] = [
+    "export.pandocBin",
+];
+
+/** Plugin settings persisted to settings.json */
+export interface PluginSettings {
+    /** Keys to exclude when saving / applying profiles */
+    skipKeys: string[];
+}

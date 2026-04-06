@@ -68,5 +68,11 @@
     "diffUnchanged": "unchanged",
     "openFolder": "Open Folder",
     "openFolderFailed": "Could not open folder",
-    "storagePath": "Storage path"
+    "storagePath": "Storage path",
+    "settingsTitle": "Settings",
+    "skipKeysLabel": "Skip Keys (excluded from sync)",
+    "skipKeysHelp": "Keys listed here will be excluded when saving and applying profiles. Use <code>module.property</code> format (e.g. <code>export.pandocBin</code>), one per line. Machine-specific paths like pandocBin differ between devices and would cause errors if synced.",
+    "resetDefaults": "Reset to Defaults",
+    "settingsSaved": "Settings saved",
+    "settingsSaveFailed": "Failed to save settings"
 }
