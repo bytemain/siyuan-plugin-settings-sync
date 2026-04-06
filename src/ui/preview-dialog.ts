@@ -1,6 +1,7 @@
 import { Dialog } from "siyuan";
 import { ConfigManager } from "../core/config-manager";
 import { CONFIG_MODULES, ConfigModule, ProfileMeta } from "../core/types";
+import { stripSkipKeys } from "../utils/skip-keys";
 
 /**
  * Compute a flat key-value diff between two objects.
@@ -181,10 +182,15 @@ export function openPreviewDialog(
 
             const currentConf = await configManager.getCurrentConf(profileModules);
 
+            // Strip skip keys from profile data so old saved keys don't appear in diff
+            const skipKeys = configManager.getSkipKeys();
+
             // Pre-compute diffs
             const diffs: Record<string, DiffResult> = {};
             for (const mod of profileModules) {
-                diffs[mod] = computeDiff(fullProfile.conf[mod], currentConf[mod]);
+                const profileModData = JSON.parse(JSON.stringify(fullProfile.conf[mod]));
+                stripSkipKeys(profileModData, mod, skipKeys);
+                diffs[mod] = computeDiff(profileModData, currentConf[mod]);
             }
 
             // Count total changes per module for tab badges
