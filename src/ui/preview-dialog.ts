@@ -58,8 +58,10 @@ function computeDiff(profileObj: any, currentObj: any): DiffResult {
         const inCurrent = key in currentFlat;
 
         if (inProfile && !inCurrent) {
+            // Key exists in profile but not in current — will be added when applied
             added.push({ path: key, profileValue: profileFlat[key] });
         } else if (!inProfile && inCurrent) {
+            // Key exists in current but not in profile — will not be overwritten, kept as-is
             removed.push({ path: key, currentValue: currentFlat[key] });
         } else if (profileFlat[key] !== currentFlat[key]) {
             changed.push({ path: key, profileValue: profileFlat[key], currentValue: currentFlat[key] });
@@ -80,7 +82,10 @@ function escapeHtml(str: string): string {
         .replace(/"/g, "&quot;");
 }
 
-function truncateValue(str: string, max: number = 120): string {
+/** Maximum characters to display for a value before truncating */
+const MAX_DISPLAY_LENGTH = 120;
+
+function truncateValue(str: string, max: number = MAX_DISPLAY_LENGTH): string {
     if (str.length <= max) return str;
     return str.slice(0, max) + "…";
 }
