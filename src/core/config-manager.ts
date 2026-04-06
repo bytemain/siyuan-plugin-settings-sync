@@ -89,7 +89,7 @@ export class ConfigManager {
         const confData = await getConf();
         const conf: Partial<Record<ConfigModule, any>> = {};
         for (const mod of modules) {
-            if (confData.conf && confData.conf[mod] !== undefined) {
+            if (confData.conf && confData.conf[mod] != null) {
                 let modData = JSON.parse(JSON.stringify(confData.conf[mod]));
                 if (filterKeymap && mod === "keymap") {
                     modData = filterCustomKeymap(modData);
@@ -105,7 +105,7 @@ export class ConfigManager {
         const confData = await getConf();
         const conf: Partial<Record<ConfigModule, any>> = {};
         for (const mod of modules) {
-            if (confData.conf && confData.conf[mod] !== undefined) {
+            if (confData.conf && confData.conf[mod] != null) {
                 let modData = JSON.parse(JSON.stringify(confData.conf[mod]));
                 // For keymap, only save user-customized bindings (filter out defaults)
                 if (mod === "keymap") {
