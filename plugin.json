@@ -1,8 +1,8 @@
 {
-  "name": "plugin-sample",
-  "author": "Vanessa",
-  "url": "https://github.com/siyuan-note/plugin-sample",
-  "version": "0.4.6",
+  "name": "settings-sync",
+  "author": "bytemain",
+  "url": "https://github.com/bytemain/siyuan-plugin-settings-sync",
+  "version": "0.1.0",
   "minAppVersion": "3.5.10",
   "backends": [
     "windows",
@@ -24,12 +24,12 @@
   ],
   "disabledInPublish": false,
   "displayName": {
-    "default": "Plugin Sample",
-    "zh_CN": "插件示例"
+    "default": "Settings Sync",
+    "zh_CN": "配置同步"
   },
   "description": {
-    "default": "This is a plugin development sample",
-    "zh_CN": "这是一个插件开发示例"
+    "default": "Sync SiYuan settings across devices via cloud storage",
+    "zh_CN": "通过云端同步，在不同设备间同步思源笔记配置"
   },
   "readme": {
     "default": "README.md",
@@ -44,8 +44,10 @@
     ]
   },
   "keywords": [
-    "开发者参考",
-    "developer reference",
-    "示例插件"
+    "settings",
+    "sync",
+    "configuration",
+    "配置同步",
+    "多设备"
   ]
 }
