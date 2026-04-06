@@ -1,6 +1,7 @@
 import { confirm, Dialog, showMessage } from "siyuan";
 import { ConfigManager } from "../core/config-manager";
-import { PLATFORM_LABELS, ProfileMeta } from "../core/types";
+import { PLATFORM_LABELS, ProfileMeta, SYNC_BASE_PATH } from "../core/types";
+import { getWorkspacePath } from "../core/siyuan-api";
 import { detectPlatform } from "../utils/platform";
 import { renderProfileCard } from "./profile-card";
 import { openSaveDialog } from "./save-dialog";
@@ -36,6 +37,7 @@ export function openMainDialog(
                 </div>
                 <div class="settings-sync__device-actions">
                     <button class="b3-button b3-button--text" data-action="save-new">📤 ${i18n.saveConfig || "Save Current Config"}</button>
+                    <button class="b3-button b3-button--text" data-action="open-folder">📂 ${i18n.openFolder || "Open Folder"}</button>
                 </div>
             </div>
             <div class="settings-sync__profiles-header">
@@ -215,6 +217,33 @@ export function openMainDialog(
     // Event: save new profile
     container.querySelector("[data-action=\"save-new\"]")?.addEventListener("click", () => {
         openSaveDialog(configManager, i18n, () => refreshList());
+    });
+
+    // Event: open profiles folder in system file manager
+    container.querySelector("[data-action=\"open-folder\"]")?.addEventListener("click", async () => {
+        try {
+            const workspacePath = await getWorkspacePath();
+            if (!workspacePath) {
+                showMessage(i18n.openFolderFailed || "Could not determine workspace path");
+                return;
+            }
+            // SYNC_BASE_PATH starts with "/data", workspace already contains the root
+            const fullPath = workspacePath + SYNC_BASE_PATH;
+
+            // Try Electron shell API (available on desktop)
+            try {
+                const { shell } = window.require("@electron/remote");
+                shell.openPath(fullPath);
+                return;
+            } catch {
+                // Not in Electron or @electron/remote not available
+            }
+
+            // Fallback: show the path so the user can navigate manually
+            showMessage(`${i18n.storagePath || "Storage path"}: ${fullPath}`, 6000);
+        } catch (e: any) {
+            showMessage(`${i18n.openFolderFailed || "Could not open folder"}: ${e.message}`);
+        }
     });
 
     // Event: filter change

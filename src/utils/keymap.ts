@@ -89,15 +89,18 @@ export function mergeKeymap(
  * We detect this by checking if any entry has custom === "" (full keymap) or not.
  */
 export function isSparseKeymap(keymap: Record<string, Record<string, KeyBinding>>): boolean {
+    // An empty keymap is not considered sparse — nothing to merge
+    let hasEntries = false;
     for (const commands of Object.values(keymap)) {
         if (!commands || typeof commands !== "object") continue;
         for (const binding of Object.values(commands)) {
             if (!binding || typeof binding !== "object") continue;
+            hasEntries = true;
             // If we find an entry with empty custom, it's a full keymap
             if (binding.custom === "") {
                 return false;
             }
         }
     }
-    return true;
+    return hasEntries;
 }

@@ -31,7 +31,6 @@
 
 ```
 data/public/settings-sync/
-├── manifest.json          # 配置索引
 └── profiles/
     ├── {uuid}.json        # 各配置快照
     └── ...

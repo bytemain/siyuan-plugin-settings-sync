@@ -29,7 +29,6 @@
     "appearance": "外观设置",
     "fileTree": "文件树设置",
     "search": "搜索设置",
-    "tag": "标签设置",
     "export": "导出设置",
     "flashcard": "闪卡设置",
     "applyConfig": "应用配置",
@@ -66,5 +65,8 @@
     "diffChanged": "项已更改",
     "diffAdded": "项新增",
     "diffRemoved": "项已移除",
-    "diffUnchanged": "项相同"
+    "diffUnchanged": "项相同",
+    "openFolder": "打开文件夹",
+    "openFolderFailed": "无法打开文件夹",
+    "storagePath": "存储路径"
 }

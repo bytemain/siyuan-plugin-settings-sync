@@ -18,14 +18,23 @@ export function getConf(): Promise<any> {
     });
 }
 
+/** Get the workspace directory path from SiYuan's conf */
+export async function getWorkspacePath(): Promise<string> {
+    const data = await getConf();
+    return data?.conf?.system?.workspaceDir || "";
+}
+
 /** Apply a single configuration module using its corresponding set* API */
 export function setConfModule(module: ConfigModule, data: any): Promise<void> {
     const api = MODULE_API_MAP[module];
+    // setKeymap expects the keymap wrapped in a "data" property
+    const payload = module === "keymap" ? { data } : data;
     return new Promise((resolve, reject) => {
-        fetchPost(api, data, (response: any) => {
+        fetchPost(api, payload, (response: any) => {
             if (response.code === 0) {
                 resolve();
             } else {
+                console.error(`[settings-sync] Failed to set ${module}:`, response);
                 reject(new Error(response.msg || `Failed to set ${module}`));
             }
         });

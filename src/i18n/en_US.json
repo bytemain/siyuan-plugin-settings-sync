@@ -29,7 +29,6 @@
     "appearance": "Appearance",
     "fileTree": "File Tree",
     "search": "Search",
-    "tag": "Tag",
     "export": "Export",
     "flashcard": "Flashcard",
     "applyConfig": "Apply Configuration",
@@ -66,5 +65,8 @@
     "diffChanged": "changed",
     "diffAdded": "added",
     "diffRemoved": "removed",
-    "diffUnchanged": "unchanged"
+    "diffUnchanged": "unchanged",
+    "openFolder": "Open Folder",
+    "openFolderFailed": "Could not open folder",
+    "storagePath": "Storage path"
 }

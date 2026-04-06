@@ -155,21 +155,32 @@ export class ConfigManager {
             throw new Error("Profile not found");
         }
 
+        const errors: string[] = [];
+
         for (const mod of modules) {
             if (profile.conf[mod] !== undefined) {
-                let dataToApply = profile.conf[mod];
+                try {
+                    let dataToApply = profile.conf[mod];
 
-                // For keymap: if the saved profile only contains customizations (sparse),
-                // merge them into the current full keymap instead of replacing everything
-                if (mod === "keymap" && isSparseKeymap(dataToApply)) {
-                    const confData = await getConf();
-                    if (confData.conf && confData.conf.keymap) {
-                        dataToApply = mergeKeymap(confData.conf.keymap, dataToApply);
+                    // For keymap: if the saved profile only contains customizations (sparse),
+                    // merge them into the current full keymap instead of replacing everything
+                    if (mod === "keymap" && isSparseKeymap(dataToApply)) {
+                        const confData = await getConf();
+                        if (confData.conf && confData.conf.keymap) {
+                            dataToApply = mergeKeymap(confData.conf.keymap, dataToApply);
+                        }
                     }
-                }
 
-                await setConfModule(mod, dataToApply);
+                    await setConfModule(mod, dataToApply);
+                } catch (e: any) {
+                    console.error(`[settings-sync] Failed to apply module "${mod}":`, e);
+                    errors.push(`${mod}: ${e.message}`);
+                }
             }
+        }
+
+        if (errors.length > 0) {
+            throw new Error(errors.join("; "));
         }
     }
 

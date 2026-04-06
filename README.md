@@ -31,7 +31,6 @@ The plugin stores configuration profiles as JSON files under `data/public/settin
 
 ```
 data/public/settings-sync/
-├── manifest.json          # Profile index
 └── profiles/
     ├── {uuid}.json        # Individual profile snapshots
     └── ...
