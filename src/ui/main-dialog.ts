@@ -23,9 +23,11 @@ export function openMainDialog(
     const filterOptions = [
         `<option value="current" selected>${i18n.filterCurrentPlatform || "Current Platform"}</option>`,
         `<option value="all">${i18n.filterAll || "All"}</option>`,
-        ...Object.entries(PLATFORM_LABELS).map(([key, label]) =>
-            `<option value="${key}">${label}</option>`
-        ),
+        ...Object.entries(PLATFORM_LABELS)
+            .filter(([key]) => key !== "all")
+            .map(([key, label]) =>
+                `<option value="${key}">${label}</option>`
+            ),
     ].join("\n");
 
     const dialog = new Dialog({
@@ -113,6 +115,9 @@ export function openMainDialog(
                     case "rename":
                         await handleRename(id);
                         break;
+                    case "edit-desc":
+                        await handleEditDescription(id);
+                        break;
                     case "update":
                         await handleUpdate(id);
                         break;
@@ -176,6 +181,65 @@ export function openMainDialog(
             }
         });
         input.addEventListener("blur", () => doRename());
+    };
+
+    const handleEditDescription = async (profileId: string) => {
+        const card = profilesContainer.querySelector(`[data-profile-id="${profileId}"]`);
+        if (!card) return;
+
+        const profiles = await configManager.listProfiles();
+        const profile = profiles.find((p) => p.id === profileId);
+        if (!profile) return;
+
+        // Find or create the description element to replace with an input
+        const descEl = card.querySelector(".settings-sync__card-desc") as HTMLElement;
+        const currentDesc = profile.description || "";
+
+        const input = document.createElement("input");
+        input.className = "b3-text-field settings-sync__rename-input";
+        input.value = currentDesc;
+        input.placeholder = i18n.description || "Description";
+
+        if (descEl) {
+            descEl.replaceWith(input);
+        } else {
+            // Insert input before the card-actions div
+            const actionsEl = card.querySelector(".settings-sync__card-actions");
+            if (actionsEl) {
+                actionsEl.before(input);
+            } else {
+                card.appendChild(input);
+            }
+        }
+
+        input.focus();
+        input.select();
+
+        const doSave = async () => {
+            if (saving) return;
+            saving = true;
+            const newDesc = input.value.trim();
+            if (newDesc !== currentDesc.trim()) {
+                try {
+                    await configManager.updateDescription(profileId, newDesc);
+                    showMessage(i18n.editDescSuccess || "Description updated");
+                } catch (e: any) {
+                    showMessage(`${i18n.editDescFailed || "Failed to update description"}: ${e.message}`);
+                }
+            }
+            await refreshList();
+        };
+
+        let saving = false;
+
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                doSave();
+            } else if (e.key === "Escape") {
+                refreshList();
+            }
+        });
+        input.addEventListener("blur", () => doSave());
     };
 
     const handleUpdate = async (profileId: string) => {
