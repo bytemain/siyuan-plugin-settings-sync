@@ -72,7 +72,7 @@ export interface SaveProfileOptions {
 }
 
 /** Base path for settings sync data in SiYuan's data directory */
-export const SYNC_BASE_PATH = "/data/public/settings-sync";
+export const SYNC_BASE_PATH = "/data/storage/petal/siyuan-plugin-settings-sync";
 export const PROFILES_DIR = `${SYNC_BASE_PATH}/profiles`;
 export const SETTINGS_FILE_PATH = `${SYNC_BASE_PATH}/settings.json`;
 

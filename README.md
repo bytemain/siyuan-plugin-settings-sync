@@ -15,7 +15,7 @@ Sync your SiYuan Note settings across devices via cloud storage.
 
 ## How It Works
 
-The plugin stores configuration profiles as JSON files under `data/public/settings-sync/`. Since SiYuan automatically syncs the `data/` directory to the cloud, your profiles become available on all your devices.
+The plugin stores configuration profiles as JSON files under `data/storage/petal/siyuan-plugin-settings-sync/`. Since SiYuan automatically syncs the `data/` directory to the cloud, your profiles become available on all your devices.
 
 **No additional cloud setup is required** — as long as SiYuan's built-in sync is enabled, profiles are synced automatically.
 
@@ -30,7 +30,7 @@ The plugin stores configuration profiles as JSON files under `data/public/settin
 ## Storage Structure
 
 ```
-data/public/settings-sync/
+data/storage/petal/siyuan-plugin-settings-sync/
 └── profiles/
     ├── {uuid}.json        # Individual profile snapshots
     └── ...

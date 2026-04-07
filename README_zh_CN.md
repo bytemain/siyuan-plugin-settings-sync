@@ -15,7 +15,7 @@
 
 ## 工作原理
 
-插件将配置文件以 JSON 格式保存在 `data/public/settings-sync/` 目录下。由于思源笔记会自动将 `data/` 目录同步到云端，您的配置会自动出现在所有设备上。
+插件将配置文件以 JSON 格式保存在 `data/storage/petal/siyuan-plugin-settings-sync/` 目录下。由于思源笔记会自动将 `data/` 目录同步到云端，您的配置会自动出现在所有设备上。
 
 **无需额外的云端配置** — 只要启用了思源的内置同步功能，配置即可自动同步。
 
@@ -30,7 +30,7 @@
 ## 存储结构
 
 ```
-data/public/settings-sync/
+data/storage/petal/siyuan-plugin-settings-sync/
 └── profiles/
     ├── {uuid}.json        # 各配置快照
     └── ...
