@@ -19,7 +19,7 @@ import { preserveLocalSkipKeys, stripSkipKeys } from "../utils/skip-keys";
 
 /**
  * ConfigManager handles all CRUD operations for configuration profiles.
- * Profiles are stored as individual JSON files under data/public/settings-sync/profiles/
+ * Profiles are stored as individual JSON files under data/storage/petal/siyuan-plugin-settings-sync/profiles/
  * and discovered by scanning the directory (no manifest index file).
  * This avoids sync conflicts when multiple devices modify profiles concurrently.
  */

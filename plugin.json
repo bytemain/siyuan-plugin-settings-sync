@@ -1,28 +1,16 @@
 {
-  "name": "settings-sync",
+  "name": "siyuan-plugin-settings-sync",
   "author": "bytemain",
   "url": "https://github.com/bytemain/siyuan-plugin-settings-sync",
   "version": "0.1.0",
   "minAppVersion": "3.5.10",
   "backends": [
-    "windows",
-    "linux",
-    "darwin",
-    "ios",
-    "android",
-    "harmony",
-    "docker",
     "all"
   ],
   "frontends": [
-    "desktop",
-    "mobile",
-    "browser-desktop",
-    "browser-mobile",
-    "desktop-window",
     "all"
   ],
-  "disabledInPublish": false,
+  "disabledInPublish": true,
   "displayName": {
     "default": "Settings Sync",
     "zh_CN": "配置同步"
@@ -34,14 +22,6 @@
   "readme": {
     "default": "README.md",
     "zh_CN": "README_zh_CN.md"
-  },
-  "funding": {
-    "openCollective": "",
-    "patreon": "",
-    "github": "",
-    "custom": [
-      "https://ld246.com/sponsor"
-    ]
   },
   "keywords": [
     "settings",
