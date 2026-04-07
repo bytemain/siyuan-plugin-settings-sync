@@ -84,6 +84,7 @@ export const SETTINGS_FILE_PATH = `${SYNC_BASE_PATH}/settings.json`;
  */
 export const DEFAULT_SKIP_KEYS: string[] = [
     "export.pandocBin",
+    "export.pandocParams",
 ];
 
 /** Plugin settings persisted to settings.json */
