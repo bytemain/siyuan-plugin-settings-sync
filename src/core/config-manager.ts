@@ -279,6 +279,23 @@ export class ConfigManager {
         }
     }
 
+    /** Update a profile's description */
+    async updateDescription(profileId: string, newDescription: string): Promise<void> {
+        const profile = await this.getProfile(profileId);
+        if (!profile) {
+            throw new Error("Profile not found");
+        }
+
+        profile.meta.description = newDescription;
+        await putFile(`${PROFILES_DIR}/${profileId}.json`, profile);
+
+        // Update in-memory cache
+        const idx = this.profilesCache.findIndex((p) => p.id === profileId);
+        if (idx >= 0) {
+            this.profilesCache[idx].description = newDescription;
+        }
+    }
+
     /** Delete a profile */
     async deleteProfile(profileId: string): Promise<void> {
         await removeFile(`${PROFILES_DIR}/${profileId}.json`);
