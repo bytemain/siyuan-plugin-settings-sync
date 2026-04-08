@@ -14,10 +14,18 @@ info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-# --- Validate arguments ---
-VERSION="${1}"
+# --- Parse arguments ---
+SKIP_EDIT=false
+VERSION=""
+for arg in "$@"; do
+  case "$arg" in
+    --no-edit) SKIP_EDIT=true ;;
+    *) VERSION="$arg" ;;
+  esac
+done
+
 if [ -z "$VERSION" ]; then
-  error "Usage: $0 <version> (e.g., 0.2.0)"
+  error "Usage: $0 [--no-edit] <version> (e.g., 0.2.0)"
 fi
 
 # Strip leading 'v' if provided (e.g., v0.2.0 -> 0.2.0)
@@ -95,18 +103,23 @@ else
   "
   info "Added changelog entry for ${TAG}. Please edit CHANGELOG.md to add release notes."
 
-  # Open editor for changelog if EDITOR is set and running interactively
-  if [ -t 0 ] && [ -n "${EDITOR:-}" ]; then
-    "$EDITOR" CHANGELOG.md
-  elif [ -t 0 ]; then
-    warn "No \$EDITOR set. Please edit CHANGELOG.md manually before continuing."
-    read -rp "Press Enter after editing CHANGELOG.md (or Ctrl+C to abort)... "
+  # Open editor for changelog if running interactively and --no-edit is not set
+  if [ "$SKIP_EDIT" = false ] && [ -t 0 ]; then
+    if [ -n "${EDITOR:-}" ]; then
+      "$EDITOR" CHANGELOG.md
+    else
+      warn "No \$EDITOR set. Please edit CHANGELOG.md manually before continuing."
+      read -rp "Press Enter after editing CHANGELOG.md (or Ctrl+C to abort)... "
+    fi
   fi
 fi
 
 # --- Step 5: Commit and create git tag ---
 info "Committing changes..."
-git add package.json plugin.json package-lock.json CHANGELOG.md
+git add package.json plugin.json CHANGELOG.md
+# Include lock files if they were modified
+git diff --quiet package-lock.json 2>/dev/null || git add package-lock.json 2>/dev/null || true
+git diff --quiet pnpm-lock.yaml 2>/dev/null || git add pnpm-lock.yaml 2>/dev/null || true
 git commit -m "chore: release ${TAG}"
 
 info "Creating tag ${TAG}..."
