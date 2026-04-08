@@ -42,8 +42,8 @@ Read `plugin.json`, set the `"version"` field to the new version, and write it b
 
 Run:
 ```bash
-npm install
-npm run build
+pnpm install
+pnpm run build
 ```
 
 Both commands must succeed. If either fails, stop and report the error — do not continue with a broken build.
@@ -64,8 +64,7 @@ To populate the changelog content, look at the git log since the last tag to sum
 
 ```bash
 git add package.json plugin.json CHANGELOG.md
-# Also stage lock files if they changed
-git add package-lock.json 2>/dev/null || true
+# Also stage lock file if it changed
 git add pnpm-lock.yaml 2>/dev/null || true
 
 git commit -m "chore: release v<version>"
@@ -90,7 +89,7 @@ The existing CI workflow (`.github/workflows/release.yml`) will automatically bu
 1. Verify clean tree, no existing `v0.3.0` tag
 2. Set `"version": "0.3.0"` in `package.json`
 3. Set `"version": "0.3.0"` in `plugin.json`
-4. Run `npm install && npm run build`
+4. Run `pnpm install && pnpm run build`
 5. Add `## v0.3.0 (2025-01-15)` section to `CHANGELOG.md`
 6. `git commit -m "chore: release v0.3.0"` and `git tag v0.3.0`
 7. Tell user to `git push origin main --tags`
