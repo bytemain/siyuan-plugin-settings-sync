@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3
+
+* Trigger SiYuan cloud sync after saving, updating, renaming, or deleting profiles and settings
+  - Automatically calls `/api/sync/performSync` after file writes so changes are synced to other devices
+  - Best-effort: gracefully handles older SiYuan versions that may not support this API
+
 ## v0.1.0
 
 * Initial release of Settings Sync plugin
