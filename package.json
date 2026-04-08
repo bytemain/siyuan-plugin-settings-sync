@@ -6,7 +6,8 @@
   "scripts": {
     "lint": "eslint . --fix --cache",
     "dev": "webpack --mode development",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "release": "bash scripts/release.sh"
   },
   "keywords": [],
   "author": "bytemain",
