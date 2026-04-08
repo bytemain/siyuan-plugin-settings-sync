@@ -116,3 +116,26 @@ export function removeFile(path: string): Promise<void> {
         });
     });
 }
+
+/**
+ * Trigger SiYuan cloud sync.
+ * Calls /api/sync/performSync to request the kernel to sync data.
+ * This is a best-effort operation – errors are logged but not thrown,
+ * because older SiYuan versions may not expose this endpoint.
+ */
+export async function performSync(): Promise<void> {
+    try {
+        const response = await fetch("/api/sync/performSync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+        });
+        if (response.ok) {
+            console.log("[settings-sync] Triggered SiYuan cloud sync");
+        } else {
+            console.debug("[settings-sync] performSync returned status:", response.status);
+        }
+    } catch (e) {
+        console.debug("[settings-sync] Failed to trigger cloud sync:", e);
+    }
+}
