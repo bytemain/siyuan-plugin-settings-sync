@@ -11,7 +11,7 @@ import {
     SaveProfileOptions,
     SETTINGS_FILE_PATH,
 } from "./types";
-import { getConf, getFile, putFile, readDir, removeFile, setConfModule } from "./siyuan-api";
+import { getConf, getFile, performSync, putFile, readDir, removeFile, setConfModule } from "./siyuan-api";
 import { detectPlatform, getDeviceName } from "../utils/platform";
 import { generateUUID } from "../utils/uuid";
 import { filterCustomKeymap, isSparseKeymap, mergeKeymap } from "../utils/keymap";
@@ -53,6 +53,7 @@ export class ConfigManager {
     /** Persist current plugin settings to disk */
     async saveSettings(): Promise<void> {
         await putFile(SETTINGS_FILE_PATH, this.settings);
+        performSync();
     }
 
     /** Get the current skip keys list */
@@ -183,6 +184,7 @@ export class ConfigManager {
 
         // Write the profile file (no manifest needed)
         await putFile(`${PROFILES_DIR}/${id}.json`, profile);
+        performSync();
 
         // Update in-memory cache
         this.profilesCache.push(meta);
@@ -254,6 +256,7 @@ export class ConfigManager {
         profile.meta.siyuanVersion = deviceInfo.siyuanVersion;
 
         await putFile(`${PROFILES_DIR}/${profileId}.json`, profile);
+        performSync();
 
         // Update in-memory cache
         const idx = this.profilesCache.findIndex((p) => p.id === profileId);
@@ -271,6 +274,7 @@ export class ConfigManager {
 
         profile.meta.name = newName;
         await putFile(`${PROFILES_DIR}/${profileId}.json`, profile);
+        performSync();
 
         // Update in-memory cache
         const idx = this.profilesCache.findIndex((p) => p.id === profileId);
@@ -288,6 +292,7 @@ export class ConfigManager {
 
         profile.meta.description = newDescription;
         await putFile(`${PROFILES_DIR}/${profileId}.json`, profile);
+        performSync();
 
         // Update in-memory cache
         const idx = this.profilesCache.findIndex((p) => p.id === profileId);
@@ -299,6 +304,7 @@ export class ConfigManager {
     /** Delete a profile */
     async deleteProfile(profileId: string): Promise<void> {
         await removeFile(`${PROFILES_DIR}/${profileId}.json`);
+        performSync();
 
         // Update in-memory cache
         this.profilesCache = this.profilesCache.filter((p) => p.id !== profileId);
