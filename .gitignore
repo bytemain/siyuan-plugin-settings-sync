@@ -4,6 +4,7 @@ node_modules
 .eslintcache
 dist
 package.zip
+package-lock.json
 index.css
 index.js
 /i18n

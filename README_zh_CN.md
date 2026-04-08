@@ -52,9 +52,9 @@ data/storage/petal/siyuan-plugin-settings-sync/
 ## 开发
 
 1. 克隆本仓库
-2. 运行 `npm install`
-3. 运行 `npm run dev` 进行开发（监听文件变更）
-4. 运行 `npm run build` 生产构建（生成 `package.zip`）
+2. 运行 `pnpm install`
+3. 运行 `pnpm run dev` 进行开发（监听文件变更）
+4. 运行 `pnpm run build` 生产构建（生成 `package.zip`）
 
 ## 许可证
 

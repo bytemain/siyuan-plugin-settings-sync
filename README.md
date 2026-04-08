@@ -52,9 +52,9 @@ data/storage/petal/siyuan-plugin-settings-sync/
 ## Development
 
 1. Clone this repository
-2. Run `npm install`
-3. Run `npm run dev` for development (watches for changes)
-4. Run `npm run build` for production build (generates `package.zip`)
+2. Run `pnpm install`
+3. Run `pnpm run dev` for development (watches for changes)
+4. Run `pnpm run build` for production build (generates `package.zip`)
 
 ## License
 
