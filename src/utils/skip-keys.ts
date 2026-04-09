@@ -17,14 +17,14 @@ function deleteByPath(obj: any, path: string[]): void {
 }
 
 /** Read a value at a dot-separated path inside an object. */
-function getByPath(obj: any, path: string[]): any {
+export function getByPath(obj: any, path: string[]): any {
     if (obj == null || typeof obj !== "object" || path.length === 0) return undefined;
     if (path.length === 1) return obj[path[0]];
     return getByPath(obj[path[0]], path.slice(1));
 }
 
 /** Write a value at a dot-separated path inside an object. */
-function setByPath(obj: any, path: string[], value: any): void {
+export function setByPath(obj: any, path: string[], value: any): void {
     if (!obj || typeof obj !== "object" || path.length === 0) return;
     if (path.length === 1) {
         obj[path[0]] = value;

@@ -77,5 +77,8 @@
     "skipKeysHelp": "此处列出的配置项在保存和应用配置时将被排除。格式为 <code>模块.属性</code>（如 <code>export.pandocBin</code>），每行一个。不同设备上的绝对路径等机器特定设置会导致同步出错。",
     "resetDefaults": "恢复默认",
     "settingsSaved": "设置已保存",
-    "settingsSaveFailed": "保存设置失败"
+    "settingsSaveFailed": "保存设置失败",
+    "applyItemTooltip": "应用此设置项",
+    "applyItemSuccess": "设置项已应用",
+    "applyItemFailed": "应用设置项失败"
 }

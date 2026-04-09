@@ -15,7 +15,7 @@ import { getConf, getFile, performSync, putFile, readDir, removeFile, setConfMod
 import { detectPlatform, getDeviceName } from "../utils/platform";
 import { generateUUID } from "../utils/uuid";
 import { filterCustomKeymap, isSparseKeymap, mergeKeymap } from "../utils/keymap";
-import { preserveLocalSkipKeys, stripSkipKeys } from "../utils/skip-keys";
+import { preserveLocalSkipKeys, setByPath, stripSkipKeys } from "../utils/skip-keys";
 
 /**
  * ConfigManager handles all CRUD operations for configuration profiles.
@@ -322,6 +322,28 @@ export class ConfigManager {
             modules: CONFIG_MODULES,
             description: "Auto backup before applying another profile",
         });
+    }
+
+    /**
+     * Apply a single setting value from a profile to the current configuration.
+     *
+     * Fetches the latest full module config, sets the specific path to the
+     * given value, and sends the complete module config back to SiYuan.
+     *
+     * @param mod          The config module (e.g. "editor")
+     * @param settingPath  Dot-separated key path within the module (e.g. "fontSize")
+     * @param value        The value to set
+     */
+    async applySingleSetting(mod: ConfigModule, settingPath: string, value: any): Promise<void> {
+        const confData = await getConf();
+        const currentModData = confData?.conf?.[mod];
+        if (currentModData == null) {
+            throw new Error(`Module "${mod}" not found in current config`);
+        }
+
+        const updated = JSON.parse(JSON.stringify(currentModData));
+        setByPath(updated, settingPath.split("."), value);
+        await setConfModule(mod, updated);
     }
 
     /** Force re-scan profiles from disk */
