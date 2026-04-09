@@ -156,13 +156,14 @@ export function openPreviewDialog(
     configManager: ConfigManager,
     profile: ProfileMeta,
     i18n: any,
+    isMobile: boolean = false,
 ): void {
     const dialog = new Dialog({
         title: `🔍 ${i18n.previewTitle || "Preview & Compare"} — ${profile.name}`,
         content: `<div class="settings-sync__preview-dialog b3-dialog__content">
             <div class="settings-sync__preview-loading">${i18n.loading || "Loading..."}</div>
         </div>`,
-        width: "800px",
+        width: isMobile ? "100%" : "800px",
     });
 
     const container = dialog.element.querySelector(".settings-sync__preview-dialog") as HTMLElement;

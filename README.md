@@ -4,7 +4,7 @@ Sync your SiYuan Note settings across devices via cloud storage.
 
 ## Features
 
-- **Save** your current SiYuan configuration (editor, keymap, appearance, file tree, search, tag, export, flashcard settings) as a named profile
+- **Save** your current SiYuan configuration (editor, keymap, appearance, file tree, search, tag, export, flashcard, AI settings) as a named profile
 - **Apply** a saved profile on any other device to instantly replicate settings
 - **Platform tags** — profiles are tagged by platform (Windows, macOS, Linux, Android, iOS, HarmonyOS, Docker) with cross-platform warnings
 - **Selective sync** — choose which configuration modules to save or apply
@@ -48,6 +48,7 @@ data/storage/petal/siyuan-plugin-settings-sync/
 | Tag | Tag management settings |
 | Export | Export preferences |
 | Flashcard | Flashcard settings |
+| AI | AI provider and model settings |
 
 ## Development
 

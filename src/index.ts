@@ -54,6 +54,6 @@ export default class SettingsSyncPlugin extends Plugin {
     }
 
     private openManager() {
-        openMainDialog(this.configManager, this.i18n);
+        openMainDialog(this.configManager, this.i18n, this.isMobile);
     }
 }

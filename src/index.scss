@@ -21,6 +21,7 @@
     margin-bottom: 8px;
     font-size: 14px;
     color: var(--b3-theme-on-surface);
+    flex-wrap: wrap;
   }
 
   &__device-actions {
@@ -33,6 +34,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   &__profiles-title {
@@ -68,7 +71,7 @@
     transition: box-shadow 0.2s;
 
     &:hover {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 8px var(--b3-theme-shadow, rgba(0, 0, 0, 0.08));
     }
   }
 
@@ -96,6 +99,7 @@
     margin-bottom: 4px;
     font-size: 13px;
     color: var(--b3-theme-on-surface-light);
+    flex-wrap: wrap;
   }
 
   &__card-tag {
@@ -189,6 +193,7 @@
     gap: 8px;
     padding-top: 8px;
     border-top: 1px solid var(--b3-border-color);
+    flex-wrap: wrap;
   }
 
   &__confirm-text {
@@ -198,8 +203,8 @@
   }
 
   &__warning {
-    background: var(--b3-card-warning-background, #fff3cd);
-    color: var(--b3-card-warning-color, #856404);
+    background: var(--b3-card-warning-background, rgba(255, 193, 7, 0.15));
+    color: var(--b3-card-warning-color, var(--b3-theme-on-background));
     border-radius: 4px;
     padding: 8px 12px;
     font-size: 13px;
@@ -222,7 +227,7 @@
   }
 
   &__error {
-    color: var(--b3-card-error-color, #dc3545);
+    color: var(--b3-card-error-color, var(--b3-theme-error));
   }
 
   // Preview & Diff dialog styles
@@ -282,12 +287,12 @@
     font-size: 11px;
     font-weight: 600;
     line-height: 18px;
-    background: var(--b3-card-warning-background, #fff3cd);
-    color: var(--b3-card-warning-color, #856404);
+    background: var(--b3-card-warning-background, rgba(255, 193, 7, 0.15));
+    color: var(--b3-card-warning-color, var(--b3-theme-on-background));
 
     &--ok {
-      background: var(--b3-card-success-background, #d4edda);
-      color: var(--b3-card-success-color, #155724);
+      background: var(--b3-card-success-background, rgba(40, 167, 69, 0.15));
+      color: var(--b3-card-success-color, var(--b3-theme-on-background));
     }
   }
 
@@ -340,15 +345,15 @@
 
   &__diff-val {
     &--old {
-      color: var(--b3-card-error-color, #dc3545);
-      background: var(--b3-card-error-background, #f8d7da);
+      color: var(--b3-card-error-color, var(--b3-theme-error));
+      background: var(--b3-card-error-background, rgba(220, 53, 69, 0.12));
       border-radius: 2px;
       padding: 1px 4px;
     }
 
     &--new {
-      color: var(--b3-card-success-color, #155724);
-      background: var(--b3-card-success-background, #d4edda);
+      color: var(--b3-card-success-color, var(--b3-theme-success));
+      background: var(--b3-card-success-background, rgba(40, 167, 69, 0.12));
       border-radius: 2px;
       padding: 1px 4px;
     }
@@ -356,15 +361,15 @@
 
   &__diff-row {
     &--changed td:first-child {
-      border-left: 3px solid var(--b3-card-warning-color, #856404);
+      border-left: 3px solid var(--b3-card-warning-color, var(--b3-theme-warning));
     }
 
     &--added td:first-child {
-      border-left: 3px solid var(--b3-card-success-color, #155724);
+      border-left: 3px solid var(--b3-card-success-color, var(--b3-theme-success));
     }
 
     &--removed td:first-child {
-      border-left: 3px solid var(--b3-card-error-color, #dc3545);
+      border-left: 3px solid var(--b3-card-error-color, var(--b3-theme-error));
     }
 
     &--applied {
@@ -386,8 +391,8 @@
     min-width: 28px;
 
     &--done {
-      color: var(--b3-card-success-color, #155724);
-      border-color: var(--b3-card-success-color, #155724);
+      color: var(--b3-card-success-color, var(--b3-theme-success));
+      border-color: var(--b3-card-success-color, var(--b3-theme-success));
       cursor: default;
       pointer-events: none;
     }
@@ -408,18 +413,18 @@
     font-weight: 500;
 
     &--changed {
-      background: var(--b3-card-warning-background, #fff3cd);
-      color: var(--b3-card-warning-color, #856404);
+      background: var(--b3-card-warning-background, rgba(255, 193, 7, 0.15));
+      color: var(--b3-card-warning-color, var(--b3-theme-on-background));
     }
 
     &--added {
-      background: var(--b3-card-success-background, #d4edda);
-      color: var(--b3-card-success-color, #155724);
+      background: var(--b3-card-success-background, rgba(40, 167, 69, 0.15));
+      color: var(--b3-card-success-color, var(--b3-theme-on-background));
     }
 
     &--removed {
-      background: var(--b3-card-error-background, #f8d7da);
-      color: var(--b3-card-error-color, #dc3545);
+      background: var(--b3-card-error-background, rgba(220, 53, 69, 0.12));
+      color: var(--b3-card-error-color, var(--b3-theme-on-background));
     }
 
     &--unchanged {
@@ -431,7 +436,7 @@
   &__diff-identical {
     text-align: center;
     padding: 24px;
-    color: var(--b3-card-success-color, #155724);
+    color: var(--b3-card-success-color, var(--b3-theme-success));
     font-size: 14px;
   }
 
@@ -464,5 +469,96 @@
     font-size: 13px;
     resize: vertical;
     min-height: 80px;
+  }
+
+  // ── Mobile-specific styles ─────────────────────────────────────
+  @media screen and (max-width: 520px) {
+    &__main {
+      gap: 12px;
+      padding: 4px;
+    }
+
+    &__device-info {
+      padding: 8px 12px;
+    }
+
+    &__device-row {
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-start;
+      font-size: 13px;
+    }
+
+    &__device-actions {
+      gap: 4px;
+
+      .b3-button {
+        font-size: 12px;
+        padding: 4px 8px;
+      }
+    }
+
+    &__profiles-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    &__filter {
+      width: 100%;
+    }
+
+    &__filter-select {
+      flex: 1;
+      min-width: 0;
+    }
+
+    &__card {
+      padding: 10px 12px;
+    }
+
+    &__card-name {
+      font-size: 14px;
+    }
+
+    &__card-info {
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    &__card-actions {
+      gap: 4px;
+
+      .b3-button {
+        font-size: 11px;
+        padding: 3px 6px;
+      }
+    }
+
+    &__diff-table {
+      font-size: 11px;
+
+      td {
+        padding: 3px 4px;
+        max-width: 120px;
+      }
+    }
+
+    &__diff-key {
+      max-width: 100px;
+    }
+
+    &__preview-tab {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    &__form-actions {
+      flex-direction: column;
+
+      .b3-button {
+        width: 100%;
+        text-align: center;
+      }
+    }
   }
 }

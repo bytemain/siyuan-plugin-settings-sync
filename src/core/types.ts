@@ -6,11 +6,11 @@
 export type Platform = "all" | "windows" | "darwin" | "linux" | "android" | "ios" | "harmony" | "docker";
 
 /** Configuration module keys that can be synced */
-export type ConfigModule = "editor" | "keymap" | "appearance" | "fileTree" | "search" | "export" | "flashcard";
+export type ConfigModule = "editor" | "keymap" | "appearance" | "fileTree" | "search" | "export" | "flashcard" | "ai";
 
 /** All available config modules */
 export const CONFIG_MODULES: ConfigModule[] = [
-    "editor", "keymap", "appearance", "fileTree", "search", "export", "flashcard"
+    "editor", "keymap", "appearance", "fileTree", "search", "export", "flashcard", "ai"
 ];
 
 /** Mapping from config module key to the SiYuan API endpoint for applying that module */
@@ -22,6 +22,7 @@ export const MODULE_API_MAP: Record<ConfigModule, string> = {
     search: "/api/setting/setSearch",
     export: "/api/setting/setExport",
     flashcard: "/api/setting/setFlashcard",
+    ai: "/api/setting/setAI",
 };
 
 /** Platform display labels */
@@ -85,6 +86,7 @@ export const SETTINGS_FILE_PATH = `${SYNC_BASE_PATH}/settings.json`;
 export const DEFAULT_SKIP_KEYS: string[] = [
     "export.pandocBin",
     "export.pandocParams",
+    "ai.openAI.apiKey",
 ];
 
 /** Plugin settings persisted to settings.json */

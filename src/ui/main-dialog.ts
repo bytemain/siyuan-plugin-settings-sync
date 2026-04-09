@@ -15,6 +15,7 @@ import { openSettingsDialog } from "./settings-dialog";
 export function openMainDialog(
     configManager: ConfigManager,
     i18n: any,
+    isMobile: boolean = false,
 ): void {
     const currentPlatform = detectPlatform();
     const deviceInfo = configManager.getDeviceInfo();
@@ -57,7 +58,7 @@ export function openMainDialog(
                 <div class="settings-sync__loading">${i18n.loading || "Loading..."}</div>
             </div>
         </div>`,
-        width: "720px",
+        width: isMobile ? "100%" : "720px",
     });
 
     const container = dialog.element;
@@ -134,7 +135,7 @@ export function openMainDialog(
         const profile = profiles.find((p) => p.id === profileId);
         if (!profile) return;
 
-        openPreviewDialog(configManager, profile, i18n);
+        openPreviewDialog(configManager, profile, i18n, isMobile);
     };
 
     const handleApply = async (profileId: string) => {
@@ -142,7 +143,7 @@ export function openMainDialog(
         const profile = profiles.find((p) => p.id === profileId);
         if (!profile) return;
 
-        openApplyDialog(configManager, profile, i18n, () => refreshList());
+        openApplyDialog(configManager, profile, i18n, () => refreshList(), isMobile);
     };
 
     const handleRename = async (profileId: string) => {
@@ -282,12 +283,12 @@ export function openMainDialog(
 
     // Event: save new profile
     container.querySelector("[data-action=\"save-new\"]")?.addEventListener("click", () => {
-        openSaveDialog(configManager, i18n, () => refreshList());
+        openSaveDialog(configManager, i18n, () => refreshList(), isMobile);
     });
 
     // Event: open plugin settings dialog
     container.querySelector("[data-action=\"open-settings\"]")?.addEventListener("click", () => {
-        openSettingsDialog(configManager, i18n);
+        openSettingsDialog(configManager, i18n, isMobile);
     });
 
     // Event: open profiles folder in system file manager
