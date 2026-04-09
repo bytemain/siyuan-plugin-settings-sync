@@ -1,7 +1,7 @@
-import { Dialog } from "siyuan";
+import { Dialog, showMessage } from "siyuan";
 import { ConfigManager } from "../core/config-manager";
 import { CONFIG_MODULES, ConfigModule, ProfileMeta } from "../core/types";
-import { stripSkipKeys } from "../utils/skip-keys";
+import { getByPath, stripSkipKeys } from "../utils/skip-keys";
 
 /**
  * Compute a flat key-value diff between two objects.
@@ -91,33 +91,37 @@ function truncateValue(str: string, max: number = MAX_DISPLAY_LENGTH): string {
     return str.slice(0, max) + "…";
 }
 
-function renderDiffTable(diff: DiffResult, i18n: any): string {
+function renderDiffTable(diff: DiffResult, i18n: any, moduleName: string): string {
     const rows: string[] = [];
+    const applyTooltip = i18n.applyItemTooltip || "Apply this setting";
 
     for (const entry of diff.changed) {
-        rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--changed">
+        rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--changed" data-diff-path="${escapeHtml(entry.path)}">
             <td class="settings-sync__diff-key" title="${escapeHtml(entry.path)}">${escapeHtml(entry.path)}</td>
             <td class="settings-sync__diff-val settings-sync__diff-val--old" title="${escapeHtml(entry.currentValue || "")}">${escapeHtml(truncateValue(entry.currentValue || ""))}</td>
             <td class="settings-sync__diff-arrow">→</td>
             <td class="settings-sync__diff-val settings-sync__diff-val--new" title="${escapeHtml(entry.profileValue || "")}">${escapeHtml(truncateValue(entry.profileValue || ""))}</td>
+            <td class="settings-sync__diff-action"><button class="settings-sync__diff-apply-btn b3-button b3-button--small b3-button--outline" data-apply-module="${escapeHtml(moduleName)}" data-apply-path="${escapeHtml(entry.path)}" title="${applyTooltip}">✓</button></td>
         </tr>`);
     }
 
     for (const entry of diff.added) {
-        rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--added">
+        rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--added" data-diff-path="${escapeHtml(entry.path)}">
             <td class="settings-sync__diff-key" title="${escapeHtml(entry.path)}">${escapeHtml(entry.path)}</td>
             <td class="settings-sync__diff-val settings-sync__diff-val--old">—</td>
             <td class="settings-sync__diff-arrow">+</td>
             <td class="settings-sync__diff-val settings-sync__diff-val--new" title="${escapeHtml(entry.profileValue || "")}">${escapeHtml(truncateValue(entry.profileValue || ""))}</td>
+            <td class="settings-sync__diff-action"><button class="settings-sync__diff-apply-btn b3-button b3-button--small b3-button--outline" data-apply-module="${escapeHtml(moduleName)}" data-apply-path="${escapeHtml(entry.path)}" title="${applyTooltip}">✓</button></td>
         </tr>`);
     }
 
     for (const entry of diff.removed) {
-        rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--removed">
+        rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--removed" data-diff-path="${escapeHtml(entry.path)}">
             <td class="settings-sync__diff-key" title="${escapeHtml(entry.path)}">${escapeHtml(entry.path)}</td>
             <td class="settings-sync__diff-val settings-sync__diff-val--old" title="${escapeHtml(entry.currentValue || "")}">${escapeHtml(truncateValue(entry.currentValue || ""))}</td>
             <td class="settings-sync__diff-arrow">−</td>
             <td class="settings-sync__diff-val settings-sync__diff-val--new">—</td>
+            <td class="settings-sync__diff-action"></td>
         </tr>`);
     }
 
@@ -132,6 +136,7 @@ function renderDiffTable(diff: DiffResult, i18n: any): string {
                 <th>${i18n.diffCurrent || "Current"}</th>
                 <th></th>
                 <th>${i18n.diffProfile || "Profile"}</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>${rows.join("")}</tbody>
@@ -212,12 +217,56 @@ export function openPreviewDialog(
             container.innerHTML = `
                 <div class="settings-sync__preview-tabs">${tabsWithBadges}</div>
                 <div class="settings-sync__preview-content" data-container="diff-content">
-                    ${renderDiffTable(diffs[profileModules[0]], i18n)}
+                    ${renderDiffTable(diffs[profileModules[0]], i18n, profileModules[0])}
                 </div>
             `;
 
-            // Tab switching
+            // Get stripped profile module data for retrieving raw values when applying
+            const strippedProfileData: Record<string, any> = {};
+            for (const mod of profileModules) {
+                const data = JSON.parse(JSON.stringify(fullProfile.conf[mod]));
+                stripSkipKeys(data, mod, skipKeys);
+                strippedProfileData[mod] = data;
+            }
+
+            /** Bind apply-button click handlers for the currently visible diff tab */
+            const bindApplyButtons = (parentEl: HTMLElement) => {
+                parentEl.querySelectorAll(".settings-sync__diff-apply-btn").forEach((btn) => {
+                    btn.addEventListener("click", async (e) => {
+                        const target = e.currentTarget as HTMLButtonElement;
+                        const mod = target.getAttribute("data-apply-module") as ConfigModule;
+                        const path = target.getAttribute("data-apply-path");
+                        if (!mod || !path) return;
+
+                        const rawValue = getByPath(strippedProfileData[mod], path.split("."));
+                        if (rawValue === undefined) return;
+
+                        target.disabled = true;
+                        try {
+                            await configManager.applySingleSetting(mod, path, rawValue);
+
+                            // Mark the row as applied
+                            const row = target.closest("tr");
+                            if (row) {
+                                row.classList.add("settings-sync__diff-row--applied");
+                            }
+                            target.textContent = "✓";
+                            target.classList.add("settings-sync__diff-apply-btn--done");
+
+                            showMessage(i18n.applyItemSuccess || "Setting applied");
+                        } catch (err: any) {
+                            target.disabled = false;
+                            showMessage(`${i18n.applyItemFailed || "Failed to apply setting"}: ${err.message}`);
+                        }
+                    });
+                });
+            };
+
+            // Bind for the initially visible tab
             const diffContent = container.querySelector("[data-container=\"diff-content\"]") as HTMLElement;
+            bindApplyButtons(diffContent);
+
+            // Tab switching
             container.querySelectorAll(".settings-sync__preview-tab").forEach((tab) => {
                 tab.addEventListener("click", () => {
                     container.querySelectorAll(".settings-sync__preview-tab").forEach((t) =>
@@ -226,7 +275,8 @@ export function openPreviewDialog(
                     tab.classList.add("settings-sync__preview-tab--active");
                     const mod = tab.getAttribute("data-module") as ConfigModule;
                     if (mod && diffs[mod]) {
-                        diffContent.innerHTML = renderDiffTable(diffs[mod], i18n);
+                        diffContent.innerHTML = renderDiffTable(diffs[mod], i18n, mod);
+                        bindApplyButtons(diffContent);
                     }
                 });
             });

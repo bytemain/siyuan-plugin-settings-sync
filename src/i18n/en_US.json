@@ -77,5 +77,8 @@
     "skipKeysHelp": "Keys listed here will be excluded when saving and applying profiles. Use <code>module.property</code> format (e.g. <code>export.pandocBin</code>), one per line. Machine-specific paths like pandocBin differ between devices and would cause errors if synced.",
     "resetDefaults": "Reset to Defaults",
     "settingsSaved": "Settings saved",
-    "settingsSaveFailed": "Failed to save settings"
+    "settingsSaveFailed": "Failed to save settings",
+    "applyItemTooltip": "Apply this setting",
+    "applyItemSuccess": "Setting applied",
+    "applyItemFailed": "Failed to apply setting"
 }

@@ -366,6 +366,31 @@
     &--removed td:first-child {
       border-left: 3px solid var(--b3-card-error-color, #dc3545);
     }
+
+    &--applied {
+      opacity: 0.5;
+    }
+  }
+
+  &__diff-action {
+    width: 36px;
+    text-align: center;
+    padding: 2px 4px;
+  }
+
+  &__diff-apply-btn {
+    padding: 2px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    line-height: 1.4;
+    min-width: 28px;
+
+    &--done {
+      color: var(--b3-card-success-color, #155724);
+      border-color: var(--b3-card-success-color, #155724);
+      cursor: default;
+      pointer-events: none;
+    }
   }
 
   &__diff-summary {
