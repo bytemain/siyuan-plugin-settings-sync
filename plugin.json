@@ -2,7 +2,7 @@
   "name": "siyuan-plugin-settings-sync",
   "author": "bytemain",
   "url": "https://github.com/bytemain/siyuan-plugin-settings-sync",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "minAppVersion": "3.5.10",
   "backends": [
     "all"
