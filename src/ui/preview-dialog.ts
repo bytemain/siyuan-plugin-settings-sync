@@ -234,23 +234,23 @@ export function openPreviewDialog(
                 parentEl.querySelectorAll(".settings-sync__diff-apply-btn").forEach((btn) => {
                     btn.addEventListener("click", async (e) => {
                         const target = e.currentTarget as HTMLButtonElement;
-                        const mod = target.getAttribute("data-apply-module") as ConfigModule;
+                        const mod = target.getAttribute("data-apply-module");
                         const path = target.getAttribute("data-apply-path");
-                        if (!mod || !path) return;
+                        if (!mod || !path || !CONFIG_MODULES.includes(mod as ConfigModule)) return;
 
-                        const rawValue = getByPath(strippedProfileData[mod], path.split("."));
+                        const pathParts = path.split(".");
+                        const rawValue = getByPath(strippedProfileData[mod], pathParts);
                         if (rawValue === undefined) return;
 
                         target.disabled = true;
                         try {
-                            await configManager.applySingleSetting(mod, path, rawValue);
+                            await configManager.applySingleSetting(mod as ConfigModule, path, rawValue);
 
                             // Mark the row as applied
                             const row = target.closest("tr");
                             if (row) {
                                 row.classList.add("settings-sync__diff-row--applied");
                             }
-                            target.textContent = "✓";
                             target.classList.add("settings-sync__diff-apply-btn--done");
 
                             showMessage(i18n.applyItemSuccess || "Setting applied");
