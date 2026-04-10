@@ -11,6 +11,7 @@ export function openApplyDialog(
     profile: ProfileMeta,
     i18n: any,
     onApplied: () => void,
+    isMobile: boolean = false,
 ): void {
     const currentPlatform = detectPlatform();
     const isCrossPlatform = profile.platform !== "all" && profile.platform !== currentPlatform;
@@ -57,7 +58,7 @@ export function openApplyDialog(
                 <button class="b3-button b3-button--text" data-action="apply">${i18n.apply || "Apply"}</button>
             </div>
         </div>`,
-        width: "520px",
+        width: isMobile ? "100%" : "520px",
     });
 
     const container = dialog.element;

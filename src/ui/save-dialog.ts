@@ -11,6 +11,7 @@ export function openSaveDialog(
     configManager: ConfigManager,
     i18n: any,
     onSaved: () => void,
+    isMobile: boolean = false,
 ): void {
     const currentPlatform = detectPlatform();
 
@@ -57,7 +58,7 @@ export function openSaveDialog(
                 <button class="b3-button b3-button--text" data-action="save">${i18n.confirmSave || "Save"}</button>
             </div>
         </div>`,
-        width: "520px",
+        width: isMobile ? "100%" : "520px",
     });
 
     const container = dialog.element;

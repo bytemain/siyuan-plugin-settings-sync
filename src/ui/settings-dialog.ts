@@ -8,6 +8,7 @@ import { DEFAULT_SKIP_KEYS } from "../core/types";
 export function openSettingsDialog(
     configManager: ConfigManager,
     i18n: any,
+    isMobile: boolean = false,
 ): void {
     const currentKeys = configManager.getSkipKeys();
 
@@ -27,7 +28,7 @@ export function openSettingsDialog(
                 <button class="b3-button b3-button--text" data-action="save-settings">${i18n.save || "Save"}</button>
             </div>
         </div>`,
-        width: "520px",
+        width: isMobile ? "100%" : "520px",
     });
 
     const container = dialog.element;
