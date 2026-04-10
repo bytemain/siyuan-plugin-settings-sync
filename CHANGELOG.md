@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.0 (2026-04-10)
+
+* Unified preview and apply into a single View dialog with module selection (#16)
+* Added AI config sync support with automatic API key exclusion (#15)
+* Mobile UI adaptation and dark mode fixes (#15)
+
 ## v0.1.3 (2026-04-09)
 
 * Trigger SiYuan cloud sync after saving, updating, renaming, or deleting profiles and settings
