@@ -26,8 +26,7 @@ export function renderProfileCard(
     </div>
     ${description}
     <div class="settings-sync__card-actions">
-        <button class="b3-button b3-button--small b3-button--outline" data-action="preview" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.preview || "Preview")}</button>
-        <button class="b3-button b3-button--small b3-button--outline" data-action="apply" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.apply)}</button>
+        <button class="b3-button b3-button--small b3-button--outline" data-action="view" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.view || "View")}</button>
         <button class="b3-button b3-button--small b3-button--outline" data-action="rename" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.rename)}</button>
         <button class="b3-button b3-button--small b3-button--outline" data-action="edit-desc" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.editDesc || "Edit Description")}</button>
         <button class="b3-button b3-button--small b3-button--outline" data-action="update" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.update)}</button>

@@ -140,8 +140,7 @@
     font-weight: 600;
   }
 
-  &__save-dialog,
-  &__apply-dialog {
+  &__save-dialog {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -299,6 +298,27 @@
   &__preview-content {
     overflow: auto;
     max-height: 55vh;
+  }
+
+  &__preview-modules {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--b3-border-color);
+  }
+
+  &__preview-modules-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__preview-modules-toggle {
+    display: flex;
+    gap: 4px;
   }
 
   &__diff-table {

@@ -215,10 +215,33 @@ export function openPreviewDialog(
                 return `<button class="settings-sync__preview-tab ${active}" data-module="${mod}">${label} ${badge}</button>`;
             }).join("");
 
+            const moduleCheckboxes = profileModules.map((mod) => {
+                const label = i18n[mod] || mod;
+                const hasDiff = tabBadges[profileModules.indexOf(mod)] > 0;
+                return `<label class="settings-sync__checkbox">
+                    <input type="checkbox" name="preview-module" value="${mod}" ${hasDiff ? "checked" : ""} />
+                    <span>${label}</span>
+                </label>`;
+            }).join("\n");
+
             container.innerHTML = `
                 <div class="settings-sync__preview-tabs">${tabsWithBadges}</div>
                 <div class="settings-sync__preview-content" data-container="diff-content">
                     ${renderDiffTable(diffs[profileModules[0]], i18n, profileModules[0])}
+                </div>
+                <div class="settings-sync__preview-modules">
+                    <div class="settings-sync__preview-modules-header">
+                        <label class="settings-sync__label">${i18n.selectModules || "Select modules to apply"}:</label>
+                        <div class="settings-sync__preview-modules-toggle">
+                            <button class="b3-button b3-button--small b3-button--outline" data-action="select-all">${i18n.selectAll || "Select All"}</button>
+                            <button class="b3-button b3-button--small b3-button--outline" data-action="deselect-all">${i18n.deselectAll || "Deselect All"}</button>
+                        </div>
+                    </div>
+                    <div class="settings-sync__modules">${moduleCheckboxes}</div>
+                </div>
+                <div class="settings-sync__form-actions">
+                    <button class="b3-button b3-button--outline" data-action="backup-apply-selected">${i18n.backupAndApplySelected || "Backup & Apply Selected"}</button>
+                    <button class="b3-button b3-button--text" data-action="apply-selected">${i18n.applySelected || "Apply Selected"}</button>
                 </div>
             `;
 
@@ -281,6 +304,46 @@ export function openPreviewDialog(
                     }
                 });
             });
+
+            // Select All / Deselect All
+            container.querySelector("[data-action=\"select-all\"]")?.addEventListener("click", () => {
+                container.querySelectorAll<HTMLInputElement>("input[name=\"preview-module\"]").forEach((el) => {
+                    el.checked = true;
+                });
+            });
+            container.querySelector("[data-action=\"deselect-all\"]")?.addEventListener("click", () => {
+                container.querySelectorAll<HTMLInputElement>("input[name=\"preview-module\"]").forEach((el) => {
+                    el.checked = false;
+                });
+            });
+
+            // Apply Selected modules
+            const doApplySelected = async (withBackup: boolean) => {
+                const moduleChecks = container.querySelectorAll<HTMLInputElement>("input[name=\"preview-module\"]:checked");
+                const modules: ConfigModule[] = [];
+                moduleChecks.forEach((el) => {
+                    modules.push(el.value as ConfigModule);
+                });
+
+                if (modules.length === 0) {
+                    showMessage(i18n.modulesRequired || "Please select at least one module");
+                    return;
+                }
+
+                try {
+                    if (withBackup) {
+                        await configManager.createAutoBackup(i18n.autoBackupPrefix || "Auto backup before apply");
+                    }
+                    await configManager.applyProfile(profile.id, modules);
+                    showMessage(i18n.applySuccess || "Configuration applied. Some settings may require a restart.");
+                    dialog.destroy();
+                } catch (e: any) {
+                    showMessage(`${i18n.applyFailed || "Apply failed"}: ${e.message}`);
+                }
+            };
+
+            container.querySelector("[data-action=\"apply-selected\"]")?.addEventListener("click", () => doApplySelected(false));
+            container.querySelector("[data-action=\"backup-apply-selected\"]")?.addEventListener("click", () => doApplySelected(true));
         } catch (e: any) {
             container.innerHTML = `<div class="settings-sync__error">${i18n.previewFailed || "Failed to load preview"}: ${escapeHtml(e.message)}</div>`;
         }

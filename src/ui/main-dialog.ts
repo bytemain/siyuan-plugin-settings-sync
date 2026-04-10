@@ -5,7 +5,6 @@ import { getWorkspacePath } from "../core/siyuan-api";
 import { detectPlatform } from "../utils/platform";
 import { renderProfileCard } from "./profile-card";
 import { openSaveDialog } from "./save-dialog";
-import { openApplyDialog } from "./apply-dialog";
 import { openPreviewDialog } from "./preview-dialog";
 import { openSettingsDialog } from "./settings-dialog";
 
@@ -107,11 +106,8 @@ export function openMainDialog(
                 if (!id) return;
 
                 switch (action) {
-                    case "preview":
+                    case "view":
                         await handlePreview(id);
-                        break;
-                    case "apply":
-                        await handleApply(id);
                         break;
                     case "rename":
                         await handleRename(id);
@@ -136,14 +132,6 @@ export function openMainDialog(
         if (!profile) return;
 
         openPreviewDialog(configManager, profile, i18n, isMobile);
-    };
-
-    const handleApply = async (profileId: string) => {
-        const profiles = await configManager.listProfiles();
-        const profile = profiles.find((p) => p.id === profileId);
-        if (!profile) return;
-
-        openApplyDialog(configManager, profile, i18n, () => refreshList(), isMobile);
     };
 
     const handleRename = async (profileId: string) => {
