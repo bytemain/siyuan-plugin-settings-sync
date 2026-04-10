@@ -57,6 +57,7 @@
     "editDesc": "修改备注",
     "editDescSuccess": "备注已更新",
     "editDescFailed": "修改备注失败",
+    "view": "查看",
     "preview": "预览",
     "previewTitle": "预览与对比",
     "profileNotFound": "找不到该配置",

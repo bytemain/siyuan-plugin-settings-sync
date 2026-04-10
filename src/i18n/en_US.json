@@ -57,6 +57,7 @@
     "editDesc": "Edit Description",
     "editDescSuccess": "Description updated",
     "editDescFailed": "Failed to update description",
+    "view": "View",
     "preview": "Preview",
     "previewTitle": "Preview & Compare",
     "profileNotFound": "Profile not found",
