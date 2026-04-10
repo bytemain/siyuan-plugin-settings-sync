@@ -81,5 +81,9 @@
     "settingsSaveFailed": "Failed to save settings",
     "applyItemTooltip": "Apply this setting",
     "applyItemSuccess": "Setting applied",
-    "applyItemFailed": "Failed to apply setting"
+    "applyItemFailed": "Failed to apply setting",
+    "applySelected": "Apply Selected",
+    "backupAndApplySelected": "Backup & Apply Selected",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All"
 }

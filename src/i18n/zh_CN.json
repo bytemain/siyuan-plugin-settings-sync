@@ -81,5 +81,9 @@
     "settingsSaveFailed": "保存设置失败",
     "applyItemTooltip": "应用此设置项",
     "applyItemSuccess": "设置项已应用",
-    "applyItemFailed": "应用设置项失败"
+    "applyItemFailed": "应用设置项失败",
+    "applySelected": "应用所选模块",
+    "backupAndApplySelected": "先备份再应用所选",
+    "selectAll": "全选",
+    "deselectAll": "取消全选"
 }
