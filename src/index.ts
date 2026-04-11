@@ -49,6 +49,10 @@ export default class SettingsSyncPlugin extends Plugin {
         });
     }
 
+    openSetting() {
+        this.openManager();
+    }
+
     onunload() {
         // No persistent resources to clean up
     }
