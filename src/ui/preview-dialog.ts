@@ -150,6 +150,185 @@ function renderDiffTable(diff: DiffResult, i18n: any, moduleName: string): strin
 }
 
 /**
+ * Render a diff table for the update preview.
+ * Unlike the apply diff, columns are swapped: "Saved" → "Current (New)".
+ * No individual apply buttons since the action is to overwrite the whole profile.
+ */
+function renderUpdateDiffTable(diff: DiffResult, i18n: any): string {
+    const rows: string[] = [];
+
+    for (const entry of diff.changed) {
+        rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--changed" data-diff-path="${escapeHtml(entry.path)}">
+            <td class="settings-sync__diff-key" title="${escapeHtml(entry.path)}">${escapeHtml(entry.path)}</td>
+            <td class="settings-sync__diff-val settings-sync__diff-val--old" title="${escapeHtml(entry.profileValue || "")}">${escapeHtml(truncateValue(entry.profileValue || ""))}</td>
+            <td class="settings-sync__diff-arrow">→</td>
+            <td class="settings-sync__diff-val settings-sync__diff-val--new" title="${escapeHtml(entry.currentValue || "")}">${escapeHtml(truncateValue(entry.currentValue || ""))}</td>
+        </tr>`);
+    }
+
+    for (const entry of diff.added) {
+        rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--added" data-diff-path="${escapeHtml(entry.path)}">
+            <td class="settings-sync__diff-key" title="${escapeHtml(entry.path)}">${escapeHtml(entry.path)}</td>
+            <td class="settings-sync__diff-val settings-sync__diff-val--old">—</td>
+            <td class="settings-sync__diff-arrow">+</td>
+            <td class="settings-sync__diff-val settings-sync__diff-val--new" title="${escapeHtml(entry.currentValue || "")}">${escapeHtml(truncateValue(entry.currentValue || ""))}</td>
+        </tr>`);
+    }
+
+    for (const entry of diff.removed) {
+        rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--removed" data-diff-path="${escapeHtml(entry.path)}">
+            <td class="settings-sync__diff-key" title="${escapeHtml(entry.path)}">${escapeHtml(entry.path)}</td>
+            <td class="settings-sync__diff-val settings-sync__diff-val--old" title="${escapeHtml(entry.profileValue || "")}">${escapeHtml(truncateValue(entry.profileValue || ""))}</td>
+            <td class="settings-sync__diff-arrow">−</td>
+            <td class="settings-sync__diff-val settings-sync__diff-val--new">—</td>
+        </tr>`);
+    }
+
+    if (rows.length === 0) {
+        return "";
+    }
+
+    return `<table class="settings-sync__diff-table">
+        <thead>
+            <tr>
+                <th>${i18n.diffKey || "Setting"}</th>
+                <th>${i18n.diffProfile || "Profile"}</th>
+                <th></th>
+                <th>${i18n.diffCurrent || "Current"}</th>
+            </tr>
+        </thead>
+        <tbody>${rows.join("")}</tbody>
+    </table>
+    <div class="settings-sync__diff-summary">
+        ${diff.changed.length > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--changed">${diff.changed.length} ${i18n.diffChanged || "changed"}</span>` : ""}
+        ${diff.added.length > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--added">${diff.added.length} ${i18n.diffAdded || "added"}</span>` : ""}
+        ${diff.removed.length > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--removed">${diff.removed.length} ${i18n.diffRemoved || "removed"}</span>` : ""}
+        ${diff.unchanged > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--unchanged">${diff.unchanged} ${i18n.diffUnchanged || "unchanged"}</span>` : ""}
+    </div>`;
+}
+
+/**
+ * Open a dialog that previews what will change when updating a profile with current device settings.
+ * Shows the diff between saved profile (old) and current config (new), then confirms the update.
+ *
+ * @param onUpdated  Callback invoked after a successful update (e.g. to refresh the profile list).
+ */
+export function openUpdatePreviewDialog(
+    configManager: ConfigManager,
+    profile: ProfileMeta,
+    i18n: any,
+    onUpdated: () => void,
+    isMobile: boolean = false,
+): void {
+    const dialog = new Dialog({
+        title: `📝 ${i18n.updatePreviewTitle || "Update Preview"} — ${profile.name}`,
+        content: `<div class="settings-sync__preview-dialog b3-dialog__content">
+            <div class="settings-sync__preview-loading">${i18n.loading || "Loading..."}</div>
+        </div>`,
+        width: isMobile ? "100%" : "800px",
+    });
+
+    const container = dialog.element.querySelector(".settings-sync__preview-dialog") as HTMLElement;
+
+    (async () => {
+        try {
+            const fullProfile = await configManager.getProfile(profile.id);
+            if (!fullProfile) {
+                container.innerHTML = `<div class="settings-sync__error">${i18n.profileNotFound || "Profile not found"}</div>`;
+                return;
+            }
+
+            const profileModules = Object.keys(fullProfile.conf).filter(
+                (m) => CONFIG_MODULES.includes(m as ConfigModule)
+            ) as ConfigModule[];
+
+            if (profileModules.length === 0) {
+                container.innerHTML = `<div class="settings-sync__empty">${i18n.noModulesInProfile || "This profile contains no configuration modules."}</div>`;
+                return;
+            }
+
+            const currentConf = await configManager.getCurrentConf(profileModules);
+
+            const skipKeys = configManager.getSkipKeys();
+
+            // Compute diffs: saved profile (old) vs current device config (new)
+            const diffs: Record<string, DiffResult> = {};
+            for (const mod of profileModules) {
+                const profileModData = JSON.parse(JSON.stringify(fullProfile.conf[mod]));
+                stripSkipKeys(profileModData, mod, skipKeys);
+                // Reverse direction: profile is "old", current is "new"
+                diffs[mod] = computeDiff(currentConf[mod], profileModData);
+            }
+
+            // Count total changes per module for tab badges
+            const tabBadges = profileModules.map((mod) => {
+                const d = diffs[mod];
+                return d.changed.length + d.added.length + d.removed.length;
+            });
+
+            const totalChanges = tabBadges.reduce((sum, b) => sum + b, 0);
+
+            const tabsHtml = profileModules.map((mod, idx) => {
+                const label = i18n[mod] || mod;
+                const active = idx === 0 ? "settings-sync__preview-tab--active" : "";
+                const badge = tabBadges[idx] > 0
+                    ? `<span class="settings-sync__preview-tab-badge">${tabBadges[idx]}</span>`
+                    : "<span class=\"settings-sync__preview-tab-badge settings-sync__preview-tab-badge--ok\">✓</span>";
+                return `<button class="settings-sync__preview-tab ${active}" data-module="${mod}">${label} ${badge}</button>`;
+            }).join("");
+
+            if (totalChanges === 0) {
+                container.innerHTML = `
+                    <div class="settings-sync__preview-tabs">${tabsHtml}</div>
+                    <div class="settings-sync__diff-identical">${i18n.noUpdateChanges || "No differences — current settings match the saved profile."}</div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="settings-sync__preview-desc">${i18n.updatePreviewDesc || "The following changes will be saved to the profile. Current device settings will overwrite the saved values."}</div>
+                <div class="settings-sync__preview-tabs">${tabsHtml}</div>
+                <div class="settings-sync__preview-content" data-container="diff-content">
+                    ${renderUpdateDiffTable(diffs[profileModules[0]], i18n)}
+                </div>
+                <div class="settings-sync__form-actions">
+                    <button class="b3-button b3-button--outline" data-action="confirm-update">${i18n.confirmUpdateBtn || "Confirm Update"}</button>
+                </div>
+            `;
+
+            // Tab switching
+            const diffContent = container.querySelector("[data-container=\"diff-content\"]") as HTMLElement;
+            container.querySelectorAll(".settings-sync__preview-tab").forEach((tab) => {
+                tab.addEventListener("click", () => {
+                    container.querySelectorAll(".settings-sync__preview-tab").forEach((t) =>
+                        t.classList.remove("settings-sync__preview-tab--active")
+                    );
+                    tab.classList.add("settings-sync__preview-tab--active");
+                    const mod = tab.getAttribute("data-module") as ConfigModule;
+                    if (mod && diffs[mod]) {
+                        diffContent.innerHTML = renderUpdateDiffTable(diffs[mod], i18n);
+                    }
+                });
+            });
+
+            // Confirm Update
+            container.querySelector("[data-action=\"confirm-update\"]")?.addEventListener("click", async () => {
+                try {
+                    await configManager.updateProfile(profile.id);
+                    showMessage(i18n.updateSuccess || "Configuration updated");
+                    dialog.destroy();
+                    onUpdated();
+                } catch (e: any) {
+                    showMessage(`${i18n.updateFailed || "Update failed"}: ${e.message}`);
+                }
+            });
+        } catch (e: any) {
+            container.innerHTML = `<div class="settings-sync__error">${i18n.previewFailed || "Failed to load preview"}: ${escapeHtml(e.message)}</div>`;
+        }
+    })();
+}
+
+/**
  * Open a dialog that previews profile content with a diff against current settings.
  */
 export function openPreviewDialog(

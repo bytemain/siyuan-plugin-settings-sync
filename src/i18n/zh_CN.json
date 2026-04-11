@@ -86,5 +86,9 @@
     "applySelected": "应用所选模块",
     "backupAndApplySelected": "先备份再应用所选",
     "selectAll": "全选",
-    "deselectAll": "取消全选"
+    "deselectAll": "取消全选",
+    "updatePreviewTitle": "更新预览",
+    "updatePreviewDesc": "以下变更将保存到配置中。当前设备的设置将覆盖已保存的值。",
+    "confirmUpdateBtn": "确认更新",
+    "noUpdateChanges": "无差异 — 当前设置与已保存的配置完全一致。"
 }
