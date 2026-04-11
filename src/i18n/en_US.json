@@ -86,5 +86,9 @@
     "applySelected": "Apply Selected",
     "backupAndApplySelected": "Backup & Apply Selected",
     "selectAll": "Select All",
-    "deselectAll": "Deselect All"
+    "deselectAll": "Deselect All",
+    "updatePreviewTitle": "Update Preview",
+    "updatePreviewDesc": "The following changes will be saved to the profile. Current device settings will overwrite the saved values.",
+    "confirmUpdateBtn": "Confirm Update",
+    "noUpdateChanges": "No differences — current settings match the saved profile."
 }

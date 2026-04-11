@@ -5,7 +5,7 @@ import { getWorkspacePath } from "../core/siyuan-api";
 import { detectPlatform } from "../utils/platform";
 import { renderProfileCard } from "./profile-card";
 import { openSaveDialog } from "./save-dialog";
-import { openPreviewDialog } from "./preview-dialog";
+import { openPreviewDialog, openUpdatePreviewDialog } from "./preview-dialog";
 import { openSettingsDialog } from "./settings-dialog";
 
 /**
@@ -236,18 +236,7 @@ export function openMainDialog(
         const profile = profiles.find((p) => p.id === profileId);
         if (!profile) return;
 
-        const msg = (i18n.confirmUpdate || "Overwrite \"${name}\" with current device config?")
-            .replace("${name}", profile.name);
-
-        confirm(i18n.update || "Update", msg, async () => {
-            try {
-                await configManager.updateProfile(profileId);
-                showMessage(i18n.updateSuccess || "Configuration updated");
-                await refreshList();
-            } catch (e: any) {
-                showMessage(`${i18n.updateFailed || "Update failed"}: ${e.message}`);
-            }
-        });
+        openUpdatePreviewDialog(configManager, profile, i18n, () => refreshList(), isMobile);
     };
 
     const handleDelete = async (profileId: string) => {
