@@ -151,8 +151,13 @@ function renderDiffTable(diff: DiffResult, i18n: any, moduleName: string): strin
 
 /**
  * Render a diff table for the update preview.
- * Unlike the apply diff, columns are swapped: "Saved" → "Current (New)".
+ * Shows what will change in the saved profile: "Saved (Old)" → "Current (New)".
  * No individual apply buttons since the action is to overwrite the whole profile.
+ *
+ * Expects diff computed as computeDiff(savedProfileData, currentDeviceConf):
+ *  - changed: profileValue = saved (old), currentValue = current (new)
+ *  - added:   in saved but not current → keys being removed; has profileValue
+ *  - removed: in current but not saved → keys being added; has currentValue
  */
 function renderUpdateDiffTable(diff: DiffResult, i18n: any): string {
     const rows: string[] = [];
@@ -166,7 +171,8 @@ function renderUpdateDiffTable(diff: DiffResult, i18n: any): string {
         </tr>`);
     }
 
-    for (const entry of diff.added) {
+    // "removed" from computeDiff = in current but not saved → new keys being added to the profile
+    for (const entry of diff.removed) {
         rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--added" data-diff-path="${escapeHtml(entry.path)}">
             <td class="settings-sync__diff-key" title="${escapeHtml(entry.path)}">${escapeHtml(entry.path)}</td>
             <td class="settings-sync__diff-val settings-sync__diff-val--old">—</td>
@@ -175,7 +181,8 @@ function renderUpdateDiffTable(diff: DiffResult, i18n: any): string {
         </tr>`);
     }
 
-    for (const entry of diff.removed) {
+    // "added" from computeDiff = in saved but not current → keys being removed from the profile
+    for (const entry of diff.added) {
         rows.push(`<tr class="settings-sync__diff-row settings-sync__diff-row--removed" data-diff-path="${escapeHtml(entry.path)}">
             <td class="settings-sync__diff-key" title="${escapeHtml(entry.path)}">${escapeHtml(entry.path)}</td>
             <td class="settings-sync__diff-val settings-sync__diff-val--old" title="${escapeHtml(entry.profileValue || "")}">${escapeHtml(truncateValue(entry.profileValue || ""))}</td>
@@ -201,8 +208,8 @@ function renderUpdateDiffTable(diff: DiffResult, i18n: any): string {
     </table>
     <div class="settings-sync__diff-summary">
         ${diff.changed.length > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--changed">${diff.changed.length} ${i18n.diffChanged || "changed"}</span>` : ""}
-        ${diff.added.length > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--added">${diff.added.length} ${i18n.diffAdded || "added"}</span>` : ""}
-        ${diff.removed.length > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--removed">${diff.removed.length} ${i18n.diffRemoved || "removed"}</span>` : ""}
+        ${diff.removed.length > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--added">${diff.removed.length} ${i18n.diffAdded || "added"}</span>` : ""}
+        ${diff.added.length > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--removed">${diff.added.length} ${i18n.diffRemoved || "removed"}</span>` : ""}
         ${diff.unchanged > 0 ? `<span class="settings-sync__diff-badge settings-sync__diff-badge--unchanged">${diff.unchanged} ${i18n.diffUnchanged || "unchanged"}</span>` : ""}
     </div>`;
 }
@@ -256,8 +263,8 @@ export function openUpdatePreviewDialog(
             for (const mod of profileModules) {
                 const profileModData = JSON.parse(JSON.stringify(fullProfile.conf[mod]));
                 stripSkipKeys(profileModData, mod, skipKeys);
-                // Reverse direction: profile is "old", current is "new"
-                diffs[mod] = computeDiff(currentConf[mod], profileModData);
+                // profileValue = saved value (old), currentValue = device value (new)
+                diffs[mod] = computeDiff(profileModData, currentConf[mod]);
             }
 
             // Count total changes per module for tab badges
