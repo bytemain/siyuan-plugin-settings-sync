@@ -101,29 +101,73 @@ export function openMainDialog(
     const bindCardActions = () => {
         profilesContainer.querySelectorAll("[data-action]").forEach((btn) => {
             btn.addEventListener("click", async (e) => {
-                const action = (e.currentTarget as HTMLElement).getAttribute("data-action");
-                const id = (e.currentTarget as HTMLElement).getAttribute("data-id");
+                const el = e.currentTarget as HTMLElement;
+                const action = el.getAttribute("data-action");
+                const id = el.getAttribute("data-id");
                 if (!id) return;
 
                 switch (action) {
                     case "view":
                         await handlePreview(id);
                         break;
-                    case "rename":
-                        await handleRename(id);
+                    case "more":
+                        handleToggleMenu(id, el);
                         break;
-                    case "edit-desc":
-                        await handleEditDescription(id);
+                    case "edit":
+                        closeAllMenus();
+                        await handleEdit(id);
                         break;
                     case "update":
                         await handleUpdate(id);
                         break;
                     case "delete":
+                        closeAllMenus();
                         await handleDelete(id);
                         break;
                 }
             });
         });
+    };
+
+    /** Close all open dropdown menus */
+    const closeAllMenus = () => {
+        profilesContainer.querySelectorAll(".settings-sync__more-menu--open")
+            .forEach((m) => m.classList.remove("settings-sync__more-menu--open"));
+    };
+
+    /** Toggle the ⋯ dropdown menu for a specific profile card */
+    let activeMenuCleanup: (() => void) | null = null;
+    const handleToggleMenu = (profileId: string, btnEl: HTMLElement) => {
+        const menu = profilesContainer.querySelector(`[data-menu-id="${profileId}"]`) as HTMLElement;
+        if (!menu) return;
+
+        const isOpen = menu.classList.contains("settings-sync__more-menu--open");
+
+        // Clean up any previous listener before toggling
+        if (activeMenuCleanup) {
+            activeMenuCleanup();
+            activeMenuCleanup = null;
+        }
+        closeAllMenus();
+
+        if (!isOpen) {
+            menu.classList.add("settings-sync__more-menu--open");
+
+            // Close menu when clicking outside
+            const onDocClick = (ev: MouseEvent) => {
+                if (!btnEl.contains(ev.target as Node) && !menu.contains(ev.target as Node)) {
+                    menu.classList.remove("settings-sync__more-menu--open");
+                    cleanup();
+                }
+            };
+            const cleanup = () => {
+                document.removeEventListener("click", onDocClick, true);
+                activeMenuCleanup = null;
+            };
+            activeMenuCleanup = cleanup;
+            // Use setTimeout so the current click event finishes first
+            setTimeout(() => document.addEventListener("click", onDocClick, true), 0);
+        }
     };
 
     const handlePreview = async (profileId: string) => {
@@ -134,101 +178,84 @@ export function openMainDialog(
         openPreviewDialog(configManager, profile, i18n, isMobile);
     };
 
-    const handleRename = async (profileId: string) => {
-        const card = profilesContainer.querySelector(`[data-profile-id="${profileId}"]`);
-        if (!card) return;
-
-        const nameEl = card.querySelector(".settings-sync__card-name") as HTMLElement;
-        if (!nameEl) return;
-
-        const currentName = nameEl.textContent || "";
-        const input = document.createElement("input");
-        input.className = "b3-text-field settings-sync__rename-input";
-        input.value = currentName;
-        nameEl.replaceWith(input);
-        input.focus();
-        input.select();
-
-        const doRename = async () => {
-            const newName = input.value.trim();
-            if (newName && newName !== currentName) {
-                try {
-                    await configManager.renameProfile(profileId, newName);
-                    showMessage(i18n.renameSuccess || "Renamed successfully");
-                } catch (e: any) {
-                    showMessage(`${i18n.renameFailed || "Rename failed"}: ${e.message}`);
-                }
-            }
-            await refreshList();
-        };
-
-        input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                doRename();
-            } else if (e.key === "Escape") {
-                refreshList();
-            }
-        });
-        input.addEventListener("blur", () => doRename());
-    };
-
-    const handleEditDescription = async (profileId: string) => {
-        const card = profilesContainer.querySelector(`[data-profile-id="${profileId}"]`);
-        if (!card) return;
-
+    const handleEdit = async (profileId: string) => {
         const profiles = await configManager.listProfiles();
         const profile = profiles.find((p) => p.id === profileId);
         if (!profile) return;
 
-        // Find or create the description element to replace with an input
-        const descEl = card.querySelector(".settings-sync__card-desc") as HTMLElement;
-        const currentDesc = profile.description || "";
+        const editDialog = new Dialog({
+            title: `✏️ ${i18n.editProfile || "Edit Profile"}`,
+            content: `<div class="settings-sync__save-dialog b3-dialog__content">
+                <div class="settings-sync__form-group">
+                    <label class="settings-sync__label">${i18n.profileName || "Profile Name"}</label>
+                    <input class="b3-text-field settings-sync__input" data-field="name" value="" />
+                </div>
+                <div class="settings-sync__form-group">
+                    <label class="settings-sync__label">${i18n.description || "Description"}</label>
+                    <input class="b3-text-field settings-sync__input" data-field="desc" value="" placeholder="${i18n.description || "Description"}" />
+                </div>
+                <div class="settings-sync__form-actions">
+                    <button class="b3-button b3-button--outline" data-action="cancel-edit">${i18n.cancel || "Cancel"}</button>
+                    <button class="b3-button b3-button--text" data-action="save-edit">${i18n.save || "Save"}</button>
+                </div>
+            </div>`,
+            width: isMobile ? "100%" : "420px",
+        });
 
-        const input = document.createElement("input");
-        input.className = "b3-text-field settings-sync__rename-input";
-        input.value = currentDesc;
-        input.placeholder = i18n.description || "Description";
+        const editContainer = editDialog.element;
+        const nameInput = editContainer.querySelector("[data-field=\"name\"]") as HTMLInputElement;
+        const descInput = editContainer.querySelector("[data-field=\"desc\"]") as HTMLInputElement;
 
-        if (descEl) {
-            descEl.replaceWith(input);
-        } else {
-            // Insert input before the card-actions div
-            const actionsEl = card.querySelector(".settings-sync__card-actions");
-            if (actionsEl) {
-                actionsEl.before(input);
-            } else {
-                card.appendChild(input);
-            }
-        }
-
-        input.focus();
-        input.select();
+        // Set values after DOM creation to avoid XSS via value attribute
+        nameInput.value = profile.name;
+        descInput.value = profile.description || "";
+        nameInput.focus();
+        nameInput.select();
 
         const doSave = async () => {
-            if (saving) return;
-            saving = true;
-            const newDesc = input.value.trim();
-            if (newDesc !== currentDesc.trim()) {
-                try {
-                    await configManager.updateDescription(profileId, newDesc);
-                    showMessage(i18n.editDescSuccess || "Description updated");
-                } catch (e: any) {
-                    showMessage(`${i18n.editDescFailed || "Failed to update description"}: ${e.message}`);
-                }
+            const newName = nameInput.value.trim();
+            const newDesc = descInput.value.trim();
+
+            if (!newName) {
+                showMessage(i18n.nameRequired || "Please enter a profile name");
+                return;
             }
-            await refreshList();
+
+            try {
+                let changed = false;
+                if (newName !== profile.name) {
+                    await configManager.renameProfile(profileId, newName);
+                    changed = true;
+                }
+                if (newDesc !== (profile.description || "").trim()) {
+                    await configManager.updateDescription(profileId, newDesc);
+                    changed = true;
+                }
+                if (changed) {
+                    showMessage(i18n.editSuccess || "Profile updated");
+                }
+                editDialog.destroy();
+                await refreshList();
+            } catch (e: any) {
+                showMessage(`${i18n.editFailed || "Failed to update profile"}: ${e.message}`);
+            }
         };
 
-        let saving = false;
+        editContainer.querySelector("[data-action=\"save-edit\"]")?.addEventListener("click", doSave);
+        editContainer.querySelector("[data-action=\"cancel-edit\"]")?.addEventListener("click", () => {
+            editDialog.destroy();
+        });
 
-        input.addEventListener("keydown", (e) => {
+        // Allow Enter to save from either field
+        const onKeydown = (e: KeyboardEvent) => {
             if (e.key === "Enter") {
                 doSave();
             } else if (e.key === "Escape") {
-                refreshList();
+                editDialog.destroy();
             }
-        });
-        input.addEventListener("blur", () => doSave());
+        };
+        nameInput.addEventListener("keydown", onKeydown);
+        descInput.addEventListener("keydown", onKeydown);
     };
 
     const handleUpdate = async (profileId: string) => {
