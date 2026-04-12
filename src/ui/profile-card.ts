@@ -27,10 +27,14 @@ export function renderProfileCard(
     ${description}
     <div class="settings-sync__card-actions">
         <button class="b3-button b3-button--small b3-button--outline" data-action="view" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.view || "View")}</button>
-        <button class="b3-button b3-button--small b3-button--outline" data-action="rename" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.rename)}</button>
-        <button class="b3-button b3-button--small b3-button--outline" data-action="edit-desc" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.editDesc || "Edit Description")}</button>
         <button class="b3-button b3-button--small b3-button--outline" data-action="update" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.update)}</button>
-        <button class="b3-button b3-button--small b3-button--outline" data-action="delete" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.delete)}</button>
+        <div class="settings-sync__more-wrapper">
+            <button class="b3-button b3-button--small b3-button--outline settings-sync__more-btn" data-action="more" data-id="${escapeHtml(profile.id)}">⋯</button>
+            <div class="settings-sync__more-menu" data-menu-id="${escapeHtml(profile.id)}">
+                <button class="settings-sync__more-menu-item" data-action="edit" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.edit || "Edit")}</button>
+                <button class="settings-sync__more-menu-item settings-sync__more-menu-item--danger" data-action="delete" data-id="${escapeHtml(profile.id)}">${escapeHtml(i18n.delete)}</button>
+            </div>
+        </div>
     </div>
 </div>`;
 }
