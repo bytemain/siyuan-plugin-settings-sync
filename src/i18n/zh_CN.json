@@ -37,6 +37,7 @@
     "export": "导出设置",
     "flashcard": "闪卡设置",
     "ai": "AI 设置",
+    "account": "帐号设置",
     "applyConfig": "应用配置",
     "confirmApply": "确认将「${name}」的配置应用到当前设备？",
     "applyWarning": "应用后将覆盖当前对应配置，建议先保存当前配置作为备份。",

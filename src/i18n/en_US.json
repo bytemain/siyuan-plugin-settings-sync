@@ -37,6 +37,7 @@
     "export": "Export",
     "flashcard": "Flashcard",
     "ai": "AI",
+    "account": "Account",
     "applyConfig": "Apply Configuration",
     "confirmApply": "Apply configuration \"${name}\" to current device?",
     "applyWarning": "Applying will overwrite current settings. Consider saving a backup first.",
