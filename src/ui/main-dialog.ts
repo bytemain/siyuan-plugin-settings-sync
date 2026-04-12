@@ -136,12 +136,20 @@ export function openMainDialog(
     };
 
     /** Toggle the ⋯ dropdown menu for a specific profile card */
+    let activeMenuCleanup: (() => void) | null = null;
     const handleToggleMenu = (profileId: string, btnEl: HTMLElement) => {
         const menu = profilesContainer.querySelector(`[data-menu-id="${profileId}"]`) as HTMLElement;
         if (!menu) return;
 
         const isOpen = menu.classList.contains("settings-sync__more-menu--open");
+
+        // Clean up any previous listener before toggling
+        if (activeMenuCleanup) {
+            activeMenuCleanup();
+            activeMenuCleanup = null;
+        }
         closeAllMenus();
+
         if (!isOpen) {
             menu.classList.add("settings-sync__more-menu--open");
 
@@ -149,9 +157,14 @@ export function openMainDialog(
             const onDocClick = (ev: MouseEvent) => {
                 if (!btnEl.contains(ev.target as Node) && !menu.contains(ev.target as Node)) {
                     menu.classList.remove("settings-sync__more-menu--open");
-                    document.removeEventListener("click", onDocClick, true);
+                    cleanup();
                 }
             };
+            const cleanup = () => {
+                document.removeEventListener("click", onDocClick, true);
+                activeMenuCleanup = null;
+            };
+            activeMenuCleanup = cleanup;
             // Use setTimeout so the current click event finishes first
             setTimeout(() => document.addEventListener("click", onDocClick, true), 0);
         }
