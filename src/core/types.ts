@@ -6,11 +6,11 @@
 export type Platform = "all" | "windows" | "darwin" | "linux" | "android" | "ios" | "harmony" | "docker";
 
 /** Configuration module keys that can be synced */
-export type ConfigModule = "editor" | "keymap" | "appearance" | "fileTree" | "search" | "export" | "flashcard" | "ai";
+export type ConfigModule = "editor" | "keymap" | "appearance" | "fileTree" | "search" | "export" | "flashcard" | "ai" | "account";
 
 /** All available config modules */
 export const CONFIG_MODULES: ConfigModule[] = [
-    "editor", "keymap", "appearance", "fileTree", "search", "export", "flashcard", "ai"
+    "editor", "keymap", "appearance", "fileTree", "search", "export", "flashcard", "ai", "account"
 ];
 
 /** Mapping from config module key to the SiYuan API endpoint for applying that module */
@@ -23,6 +23,7 @@ export const MODULE_API_MAP: Record<ConfigModule, string> = {
     export: "/api/setting/setExport",
     flashcard: "/api/setting/setFlashcard",
     ai: "/api/setting/setAI",
+    account: "/api/setting/setAccount",
 };
 
 /** Platform display labels */
