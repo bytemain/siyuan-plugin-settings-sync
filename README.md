@@ -57,6 +57,10 @@ data/storage/petal/siyuan-plugin-settings-sync/
 3. Run `pnpm run dev` for development (watches for changes)
 4. Run `pnpm run build` for production build (generates `package.zip`)
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+
 ## License
 
 MIT
