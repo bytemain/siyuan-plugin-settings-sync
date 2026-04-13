@@ -4,6 +4,7 @@
 
 * Added account config module for syncing displayTitle and displayVIP settings (#21)
 * Merged Rename and Edit Description into a ⋯ More dropdown menu (#20)
+* Show update preview dialog with diff before confirming profile update (#19)
 
 ## v0.2.0 (2026-04-10)
 
