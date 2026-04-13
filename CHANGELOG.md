@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.0 (2026-04-13)
+
+* Added account config module for syncing displayTitle and displayVIP settings (#21)
+* Merged Rename and Edit Description into a ⋯ More dropdown menu (#20)
+
 ## v0.2.0 (2026-04-10)
 
 * Unified preview and apply into a single View dialog with module selection (#16)

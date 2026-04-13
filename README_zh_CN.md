@@ -57,6 +57,10 @@ data/storage/petal/siyuan-plugin-settings-sync/
 3. 运行 `pnpm run dev` 进行开发（监听文件变更）
 4. 运行 `pnpm run build` 生产构建（生成 `package.zip`）
 
+## 更新日志
+
+查看 [CHANGELOG.md](CHANGELOG.md) 了解完整的版本历史。
+
 ## 许可证
 
 MIT
