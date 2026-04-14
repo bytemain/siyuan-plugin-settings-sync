@@ -88,6 +88,7 @@ export const DEFAULT_SKIP_KEYS: string[] = [
     "export.pandocBin",
     "export.pandocParams",
     "ai.openAI.apiKey",
+    "ai.openAI.apiUserAgent",
 ];
 
 /** Plugin settings persisted to settings.json */
