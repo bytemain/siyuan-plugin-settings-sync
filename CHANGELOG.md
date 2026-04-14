@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.1 (2026-04-14)
+
+* Add ai.openAI.apiUserAgent to default skip keys (#24)
+* Fix: show account tab in preview dialogs for all config modules (#23)
+
 ## v0.3.0 (2026-04-13)
 
 * Added account config module for syncing displayTitle and displayVIP settings (#21)
