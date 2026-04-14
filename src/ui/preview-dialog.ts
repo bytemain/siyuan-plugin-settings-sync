@@ -245,37 +245,36 @@ export function openUpdatePreviewDialog(
                 return;
             }
 
-            const profileModules = Object.keys(fullProfile.conf).filter(
-                (m) => CONFIG_MODULES.includes(m as ConfigModule)
-            ) as ConfigModule[];
+            // Use ALL config modules so newly added modules (e.g. account) appear
+            // even when previewing profiles saved before those modules existed.
+            const allModules = CONFIG_MODULES;
 
-            if (profileModules.length === 0) {
-                container.innerHTML = `<div class="settings-sync__empty">${i18n.noModulesInProfile || "This profile contains no configuration modules."}</div>`;
-                return;
-            }
-
-            const currentConf = await configManager.getCurrentConf(profileModules);
+            const currentConf = await configManager.getCurrentConf(allModules);
 
             const skipKeys = configManager.getSkipKeys();
 
             // Compute diffs: saved profile (old) vs current device config (new)
             const diffs: Record<string, DiffResult> = {};
-            for (const mod of profileModules) {
-                const profileModData = JSON.parse(JSON.stringify(fullProfile.conf[mod]));
-                stripSkipKeys(profileModData, mod, skipKeys);
+            for (const mod of allModules) {
+                const profileModData = fullProfile.conf[mod] != null
+                    ? JSON.parse(JSON.stringify(fullProfile.conf[mod]))
+                    : undefined;
+                if (profileModData != null) {
+                    stripSkipKeys(profileModData, mod, skipKeys);
+                }
                 // profileValue = saved value (old), currentValue = device value (new)
                 diffs[mod] = computeDiff(profileModData, currentConf[mod]);
             }
 
             // Count total changes per module for tab badges
-            const tabBadges = profileModules.map((mod) => {
+            const tabBadges = allModules.map((mod) => {
                 const d = diffs[mod];
                 return d.changed.length + d.added.length + d.removed.length;
             });
 
             const totalChanges = tabBadges.reduce((sum, b) => sum + b, 0);
 
-            const tabsHtml = profileModules.map((mod, idx) => {
+            const tabsHtml = allModules.map((mod, idx) => {
                 const label = i18n[mod] || mod;
                 const active = idx === 0 ? "settings-sync__preview-tab--active" : "";
                 const badge = tabBadges[idx] > 0
@@ -296,7 +295,7 @@ export function openUpdatePreviewDialog(
                 <div class="settings-sync__preview-desc">${i18n.updatePreviewDesc || "The following changes will be saved to the profile. Current device settings will overwrite the saved values."}</div>
                 <div class="settings-sync__preview-tabs">${tabsHtml}</div>
                 <div class="settings-sync__preview-content" data-container="diff-content">
-                    ${renderUpdateDiffTable(diffs[profileModules[0]], i18n)}
+                    ${renderUpdateDiffTable(diffs[allModules[0]], i18n)}
                 </div>
                 <div class="settings-sync__form-actions">
                     <button class="b3-button b3-button--outline" data-action="confirm-update">${i18n.confirmUpdateBtn || "Confirm Update"}</button>
@@ -363,36 +362,35 @@ export function openPreviewDialog(
                 return;
             }
 
-            const profileModules = Object.keys(fullProfile.conf).filter(
-                (m) => CONFIG_MODULES.includes(m as ConfigModule)
-            ) as ConfigModule[];
+            // Use ALL config modules so newly added modules (e.g. account) appear
+            // even when previewing profiles saved before those modules existed.
+            const allModules = CONFIG_MODULES;
 
-            if (profileModules.length === 0) {
-                container.innerHTML = `<div class="settings-sync__empty">${i18n.noModulesInProfile || "This profile contains no configuration modules."}</div>`;
-                return;
-            }
-
-            const currentConf = await configManager.getCurrentConf(profileModules);
+            const currentConf = await configManager.getCurrentConf(allModules);
 
             // Strip skip keys from profile data so old saved keys don't appear in diff
             const skipKeys = configManager.getSkipKeys();
 
             // Pre-compute diffs
             const diffs: Record<string, DiffResult> = {};
-            for (const mod of profileModules) {
-                const profileModData = JSON.parse(JSON.stringify(fullProfile.conf[mod]));
-                stripSkipKeys(profileModData, mod, skipKeys);
+            for (const mod of allModules) {
+                const profileModData = fullProfile.conf[mod] != null
+                    ? JSON.parse(JSON.stringify(fullProfile.conf[mod]))
+                    : undefined;
+                if (profileModData != null) {
+                    stripSkipKeys(profileModData, mod, skipKeys);
+                }
                 diffs[mod] = computeDiff(profileModData, currentConf[mod]);
             }
 
             // Count total changes per module for tab badges
-            const tabBadges = profileModules.map((mod) => {
+            const tabBadges = allModules.map((mod) => {
                 const d = diffs[mod];
                 const total = d.changed.length + d.added.length + d.removed.length;
                 return total;
             });
 
-            const tabsWithBadges = profileModules.map((mod, idx) => {
+            const tabsWithBadges = allModules.map((mod, idx) => {
                 const label = i18n[mod] || mod;
                 const active = idx === 0 ? "settings-sync__preview-tab--active" : "";
                 const badge = tabBadges[idx] > 0
@@ -401,9 +399,9 @@ export function openPreviewDialog(
                 return `<button class="settings-sync__preview-tab ${active}" data-module="${mod}">${label} ${badge}</button>`;
             }).join("");
 
-            const moduleCheckboxes = profileModules.map((mod) => {
+            const moduleCheckboxes = allModules.map((mod, idx) => {
                 const label = i18n[mod] || mod;
-                const hasDiff = tabBadges[profileModules.indexOf(mod)] > 0;
+                const hasDiff = tabBadges[idx] > 0;
                 return `<label class="settings-sync__checkbox">
                     <input type="checkbox" name="preview-module" value="${mod}" ${hasDiff ? "checked" : ""} />
                     <span>${label}</span>
@@ -413,7 +411,7 @@ export function openPreviewDialog(
             container.innerHTML = `
                 <div class="settings-sync__preview-tabs">${tabsWithBadges}</div>
                 <div class="settings-sync__preview-content" data-container="diff-content">
-                    ${renderDiffTable(diffs[profileModules[0]], i18n, profileModules[0])}
+                    ${renderDiffTable(diffs[allModules[0]], i18n, allModules[0])}
                 </div>
                 <div class="settings-sync__preview-modules">
                     <div class="settings-sync__preview-modules-header">
@@ -433,10 +431,12 @@ export function openPreviewDialog(
 
             // Get stripped profile module data for retrieving raw values when applying
             const strippedProfileData: Record<string, any> = {};
-            for (const mod of profileModules) {
-                const data = JSON.parse(JSON.stringify(fullProfile.conf[mod]));
-                stripSkipKeys(data, mod, skipKeys);
-                strippedProfileData[mod] = data;
+            for (const mod of allModules) {
+                if (fullProfile.conf[mod] != null) {
+                    const data = JSON.parse(JSON.stringify(fullProfile.conf[mod]));
+                    stripSkipKeys(data, mod, skipKeys);
+                    strippedProfileData[mod] = data;
+                }
             }
 
             /** Bind apply-button click handlers for the currently visible diff tab */
