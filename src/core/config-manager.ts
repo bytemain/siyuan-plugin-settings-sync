@@ -241,12 +241,9 @@ export class ConfigManager {
             throw new Error("Profile not found");
         }
 
-        // Determine which modules were in the original profile
-        const modules = (Object.keys(profile.conf) as ConfigModule[]).filter(
-            (m) => CONFIG_MODULES.includes(m)
-        );
-
-        const conf = await this.captureCurrentConf(modules.length > 0 ? modules : CONFIG_MODULES);
+        // Always capture ALL config modules so newly added modules (e.g. account)
+        // are included when updating old profiles.
+        const conf = await this.captureCurrentConf(CONFIG_MODULES);
         const now = new Date().toISOString();
         const deviceInfo = this.getDeviceInfo();
 
