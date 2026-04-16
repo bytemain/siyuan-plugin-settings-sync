@@ -45,6 +45,71 @@ describe("filterCustomKeymap", () => {
     it("should handle empty keymap", () => {
         expect(filterCustomKeymap({})).toEqual({});
     });
+
+    it("should handle nested editor subcategories", () => {
+        const keymap = {
+            general: {
+                search: { default: "Ctrl+P", custom: "Ctrl+Shift+P" },
+            },
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "Ctrl+Enter" },
+                    insertBlockAbove: { default: "Shift+Enter", custom: "" },
+                },
+                insert: {
+                    lastUsed: { default: "", custom: "" },
+                },
+                heading: {
+                    heading1: { default: "Ctrl+1", custom: "" },
+                },
+            },
+        };
+        const result = filterCustomKeymap(keymap);
+        expect(result).toEqual({
+            general: {
+                search: { default: "Ctrl+P", custom: "Ctrl+Shift+P" },
+            },
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "Ctrl+Enter" },
+                },
+            },
+        });
+    });
+
+    it("should omit nested categories when all bindings are defaults", () => {
+        const keymap = {
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "" },
+                },
+                heading: {
+                    heading1: { default: "Ctrl+1", custom: "" },
+                },
+            },
+        };
+        const result = filterCustomKeymap(keymap);
+        expect(result).toEqual({});
+    });
+
+    it("should handle nested plugin subcategories", () => {
+        const keymap = {
+            plugin: {
+                myPlugin: {
+                    action1: { default: "", custom: "Ctrl+Alt+1" },
+                    action2: { default: "", custom: "" },
+                },
+            },
+        };
+        const result = filterCustomKeymap(keymap);
+        expect(result).toEqual({
+            plugin: {
+                myPlugin: {
+                    action1: { default: "", custom: "Ctrl+Alt+1" },
+                },
+            },
+        });
+    });
 });
 
 describe("mergeKeymap", () => {
@@ -98,6 +163,51 @@ describe("mergeKeymap", () => {
         mergeKeymap(current, saved);
         expect(current.general.search.custom).toBe("");
     });
+
+    it("should merge nested editor subcategory bindings", () => {
+        const current = {
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "" },
+                    insertBlockAbove: { default: "Shift+Enter", custom: "" },
+                },
+                heading: {
+                    heading1: { default: "Ctrl+1", custom: "" },
+                },
+            },
+        };
+        const saved = {
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "Ctrl+Enter" },
+                },
+            },
+        };
+        const result = mergeKeymap(current, saved);
+        expect(result.editor.general.insertBlockBelow.custom).toBe("Ctrl+Enter");
+        expect(result.editor.general.insertBlockAbove.custom).toBe(""); // unchanged
+        expect(result.editor.heading.heading1.custom).toBe(""); // unchanged
+    });
+
+    it("should add new subcategories in nested categories", () => {
+        const current = {
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "" },
+                },
+            },
+        };
+        const saved = {
+            editor: {
+                table: {
+                    insertRowAbove: { default: "", custom: "Ctrl+Shift+Up" },
+                },
+            },
+        };
+        const result = mergeKeymap(current, saved);
+        expect(result.editor.table.insertRowAbove.custom).toBe("Ctrl+Shift+Up");
+        expect(result.editor.general.insertBlockBelow.custom).toBe("");
+    });
 });
 
 describe("isSparseKeymap", () => {
@@ -122,5 +232,42 @@ describe("isSparseKeymap", () => {
 
     it("should return false for an empty keymap", () => {
         expect(isSparseKeymap({})).toBe(false);
+    });
+
+    it("should return true for a sparse nested keymap", () => {
+        const keymap = {
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "Ctrl+Enter" },
+                },
+            },
+        };
+        expect(isSparseKeymap(keymap)).toBe(true);
+    });
+
+    it("should return false for a full nested keymap (has empty custom)", () => {
+        const keymap = {
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "" },
+                    insertBlockAbove: { default: "Shift+Enter", custom: "Ctrl+Shift+Enter" },
+                },
+            },
+        };
+        expect(isSparseKeymap(keymap)).toBe(false);
+    });
+
+    it("should return false for a mixed keymap with nested empty custom", () => {
+        const keymap = {
+            general: {
+                search: { default: "Ctrl+P", custom: "Ctrl+Shift+P" },
+            },
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "" },
+                },
+            },
+        };
+        expect(isSparseKeymap(keymap)).toBe(false);
     });
 });
