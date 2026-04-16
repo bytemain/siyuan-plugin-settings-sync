@@ -84,6 +84,34 @@ function escapeHtml(str: string): string {
         .replace(/"/g, "&quot;");
 }
 
+/**
+ * Prepare profile and current module data for diffing.
+ * Deep-clones inputs, strips skip keys from profile data, and strips keymap
+ * `default` fields so only user-set `custom` bindings appear in the diff.
+ */
+function prepareDiffData(
+    profileRaw: any | undefined,
+    currentRaw: any | undefined,
+    mod: ConfigModule,
+    skipKeys: string[],
+): { profileData: any; currentData: any } {
+    let profileData = profileRaw != null
+        ? JSON.parse(JSON.stringify(profileRaw))
+        : undefined;
+    if (profileData != null) {
+        stripSkipKeys(profileData, mod, skipKeys);
+    }
+    let currentData = currentRaw != null
+        ? JSON.parse(JSON.stringify(currentRaw))
+        : currentRaw;
+    // Strip keymap `default` fields — only `custom` bindings are meaningful for users
+    if (mod === "keymap") {
+        if (profileData != null) profileData = stripKeymapDefaults(profileData);
+        if (currentData != null) currentData = stripKeymapDefaults(currentData);
+    }
+    return { profileData, currentData };
+}
+
 /** Maximum characters to display for a value before truncating */
 const MAX_DISPLAY_LENGTH = 120;
 
@@ -257,20 +285,11 @@ export function openUpdatePreviewDialog(
             // Compute diffs: saved profile (old) vs current device config (new)
             const diffs: Record<string, DiffResult> = {};
             for (const mod of allModules) {
-                let profileModData = fullProfile.conf[mod] != null
-                    ? JSON.parse(JSON.stringify(fullProfile.conf[mod]))
-                    : undefined;
-                if (profileModData != null) {
-                    stripSkipKeys(profileModData, mod, skipKeys);
-                }
-                let currentModData = currentConf[mod];
-                // Strip keymap `default` fields — only `custom` bindings are meaningful for users
-                if (mod === "keymap") {
-                    if (profileModData != null) profileModData = stripKeymapDefaults(profileModData);
-                    if (currentModData != null) currentModData = stripKeymapDefaults(currentModData);
-                }
+                const { profileData, currentData } = prepareDiffData(
+                    fullProfile.conf[mod], currentConf[mod], mod, skipKeys,
+                );
                 // profileValue = saved value (old), currentValue = device value (new)
-                diffs[mod] = computeDiff(profileModData, currentModData);
+                diffs[mod] = computeDiff(profileData, currentData);
             }
 
             // Count total changes per module for tab badges
@@ -381,19 +400,10 @@ export function openPreviewDialog(
             // Pre-compute diffs
             const diffs: Record<string, DiffResult> = {};
             for (const mod of allModules) {
-                let profileModData = fullProfile.conf[mod] != null
-                    ? JSON.parse(JSON.stringify(fullProfile.conf[mod]))
-                    : undefined;
-                if (profileModData != null) {
-                    stripSkipKeys(profileModData, mod, skipKeys);
-                }
-                let currentModData = currentConf[mod];
-                // Strip keymap `default` fields — only `custom` bindings are meaningful for users
-                if (mod === "keymap") {
-                    if (profileModData != null) profileModData = stripKeymapDefaults(profileModData);
-                    if (currentModData != null) currentModData = stripKeymapDefaults(currentModData);
-                }
-                diffs[mod] = computeDiff(profileModData, currentModData);
+                const { profileData, currentData } = prepareDiffData(
+                    fullProfile.conf[mod], currentConf[mod], mod, skipKeys,
+                );
+                diffs[mod] = computeDiff(profileData, currentData);
             }
 
             // Count total changes per module for tab badges
