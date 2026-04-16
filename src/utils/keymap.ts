@@ -146,6 +146,52 @@ export function mergeKeymap(
 }
 
 /**
+ * Strip `default` fields from keymap leaf nodes for display purposes.
+ *
+ * The `default` value in a KeyBinding represents SiYuan's built-in default shortcut.
+ * It is not meaningful for users to view or apply, so we remove it before
+ * showing diffs in the preview UI. Only the `custom` value (user-set binding)
+ * is kept.
+ *
+ * Handles both flat categories and nested subcategories.
+ */
+export function stripKeymapDefaults(keymap: Record<string, any>): Record<string, any> {
+    const result: Record<string, any> = {};
+
+    for (const [category, value] of Object.entries(keymap)) {
+        if (!value || typeof value !== "object") continue;
+
+        const firstChild = Object.values(value).find((v) => v && typeof v === "object");
+        if (isKeyBinding(firstChild)) {
+            // Flat category: { commandName: { default, custom } }
+            const cleaned: Record<string, any> = {};
+            for (const [cmd, binding] of Object.entries(value)) {
+                if (isKeyBinding(binding)) {
+                    cleaned[cmd] = { custom: (binding as KeyBinding).custom };
+                }
+            }
+            if (Object.keys(cleaned).length > 0) result[category] = cleaned;
+        } else {
+            // Nested category: { subcategory: { commandName: { default, custom } } }
+            const cleanedCategory: Record<string, any> = {};
+            for (const [subcat, subCommands] of Object.entries(value)) {
+                if (!subCommands || typeof subCommands !== "object") continue;
+                const cleaned: Record<string, any> = {};
+                for (const [cmd, binding] of Object.entries(subCommands as Record<string, any>)) {
+                    if (isKeyBinding(binding)) {
+                        cleaned[cmd] = { custom: (binding as KeyBinding).custom };
+                    }
+                }
+                if (Object.keys(cleaned).length > 0) cleanedCategory[subcat] = cleaned;
+            }
+            if (Object.keys(cleanedCategory).length > 0) result[category] = cleanedCategory;
+        }
+    }
+
+    return result;
+}
+
+/**
  * Check if a keymap object is a sparse/filtered keymap (only customizations)
  * vs a full keymap. A sparse keymap will have significantly fewer entries.
  * We detect this by checking if any entry has custom === "" (full keymap) or not.

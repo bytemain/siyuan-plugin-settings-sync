@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { filterCustomKeymap, mergeKeymap, isSparseKeymap } from "../keymap";
+import { filterCustomKeymap, mergeKeymap, isSparseKeymap, stripKeymapDefaults } from "../keymap";
 
 describe("filterCustomKeymap", () => {
     it("should keep only bindings with custom different from default", () => {
@@ -269,5 +269,72 @@ describe("isSparseKeymap", () => {
             },
         };
         expect(isSparseKeymap(keymap)).toBe(false);
+    });
+});
+
+describe("stripKeymapDefaults", () => {
+    it("should remove default fields from flat categories", () => {
+        const keymap = {
+            general: {
+                search: { default: "Ctrl+P", custom: "Ctrl+Shift+P" },
+                close: { default: "Ctrl+W", custom: "" },
+            },
+        };
+        expect(stripKeymapDefaults(keymap)).toEqual({
+            general: {
+                search: { custom: "Ctrl+Shift+P" },
+                close: { custom: "" },
+            },
+        });
+    });
+
+    it("should remove default fields from nested categories", () => {
+        const keymap = {
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "Ctrl+Enter" },
+                },
+                heading: {
+                    heading1: { default: "Ctrl+1", custom: "" },
+                },
+            },
+        };
+        expect(stripKeymapDefaults(keymap)).toEqual({
+            editor: {
+                general: {
+                    insertBlockBelow: { custom: "Ctrl+Enter" },
+                },
+                heading: {
+                    heading1: { custom: "" },
+                },
+            },
+        });
+    });
+
+    it("should handle mixed flat and nested categories", () => {
+        const keymap = {
+            general: {
+                search: { default: "Ctrl+P", custom: "Ctrl+Shift+P" },
+            },
+            editor: {
+                general: {
+                    insertBlockBelow: { default: "Enter", custom: "Ctrl+Enter" },
+                },
+            },
+        };
+        expect(stripKeymapDefaults(keymap)).toEqual({
+            general: {
+                search: { custom: "Ctrl+Shift+P" },
+            },
+            editor: {
+                general: {
+                    insertBlockBelow: { custom: "Ctrl+Enter" },
+                },
+            },
+        });
+    });
+
+    it("should return empty object for empty keymap", () => {
+        expect(stripKeymapDefaults({})).toEqual({});
     });
 });

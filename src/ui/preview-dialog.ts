@@ -1,6 +1,7 @@
 import { Dialog, showMessage } from "siyuan";
 import { ConfigManager } from "../core/config-manager";
 import { CONFIG_MODULES, ConfigModule, ProfileMeta } from "../core/types";
+import { stripKeymapDefaults } from "../utils/keymap";
 import { getByPath, stripSkipKeys } from "../utils/skip-keys";
 
 /**
@@ -256,14 +257,20 @@ export function openUpdatePreviewDialog(
             // Compute diffs: saved profile (old) vs current device config (new)
             const diffs: Record<string, DiffResult> = {};
             for (const mod of allModules) {
-                const profileModData = fullProfile.conf[mod] != null
+                let profileModData = fullProfile.conf[mod] != null
                     ? JSON.parse(JSON.stringify(fullProfile.conf[mod]))
                     : undefined;
                 if (profileModData != null) {
                     stripSkipKeys(profileModData, mod, skipKeys);
                 }
+                let currentModData = currentConf[mod];
+                // Strip keymap `default` fields — only `custom` bindings are meaningful for users
+                if (mod === "keymap") {
+                    if (profileModData != null) profileModData = stripKeymapDefaults(profileModData);
+                    if (currentModData != null) currentModData = stripKeymapDefaults(currentModData);
+                }
                 // profileValue = saved value (old), currentValue = device value (new)
-                diffs[mod] = computeDiff(profileModData, currentConf[mod]);
+                diffs[mod] = computeDiff(profileModData, currentModData);
             }
 
             // Count total changes per module for tab badges
@@ -374,13 +381,19 @@ export function openPreviewDialog(
             // Pre-compute diffs
             const diffs: Record<string, DiffResult> = {};
             for (const mod of allModules) {
-                const profileModData = fullProfile.conf[mod] != null
+                let profileModData = fullProfile.conf[mod] != null
                     ? JSON.parse(JSON.stringify(fullProfile.conf[mod]))
                     : undefined;
                 if (profileModData != null) {
                     stripSkipKeys(profileModData, mod, skipKeys);
                 }
-                diffs[mod] = computeDiff(profileModData, currentConf[mod]);
+                let currentModData = currentConf[mod];
+                // Strip keymap `default` fields — only `custom` bindings are meaningful for users
+                if (mod === "keymap") {
+                    if (profileModData != null) profileModData = stripKeymapDefaults(profileModData);
+                    if (currentModData != null) currentModData = stripKeymapDefaults(currentModData);
+                }
+                diffs[mod] = computeDiff(profileModData, currentModData);
             }
 
             // Count total changes per module for tab badges
