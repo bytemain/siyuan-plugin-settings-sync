@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.2 (2026-04-16)
+
+* Hide keymap `default` field from preview/diff UI (#28)
+* Fix keymap filter to handle nested subcategories (editor/plugin shortcuts) (#27)
+
 ## v0.3.1 (2026-04-14)
 
 * Add ai.openAI.apiUserAgent to default skip keys (#24)
