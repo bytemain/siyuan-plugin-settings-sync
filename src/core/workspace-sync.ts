@@ -2,6 +2,7 @@ import {
     ConfigModule,
     Profile,
     ProfileMeta,
+    PROFILES_SUBPATH,
     REMOTE_CACHE_DIR,
     SHARED_FOLDER_TARGET_ID,
 } from "./types";
@@ -223,7 +224,7 @@ export class WorkspaceSync {
      */
     async pullProfile(target: SyncTarget, profileId: string): Promise<ProfileMeta> {
         const localWs = await this.ensureCurrentWorkspace();
-        const localProfilesAbs = joinWorkspacePath(localWs, "data/storage/petal/siyuan-plugin-settings-sync/profiles");
+        const localProfilesAbs = joinWorkspacePath(localWs, PROFILES_SUBPATH);
 
         await globalCopyFiles([this.remoteProfileFilePath(target, profileId)], localProfilesAbs);
         this.supported = true;
@@ -252,7 +253,7 @@ export class WorkspaceSync {
      */
     async pushProfile(profileId: string, targets: SyncTarget[]): Promise<{ failed: { target: SyncTarget; error: string }[] }> {
         const localWs = await this.ensureCurrentWorkspace();
-        const srcAbs = joinWorkspacePath(localWs, `data/storage/petal/siyuan-plugin-settings-sync/profiles/${profileId}.json`);
+        const srcAbs = joinWorkspacePath(localWs, `${PROFILES_SUBPATH}/${profileId}.json`);
 
         const failed: { target: SyncTarget; error: string }[] = [];
         for (const target of targets) {
