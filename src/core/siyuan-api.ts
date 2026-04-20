@@ -117,6 +117,50 @@ export function removeFile(path: string): Promise<void> {
     });
 }
 
+/** A SiYuan workspace as reported by /api/system/getWorkspaces */
+export interface WorkspaceInfo {
+    /** Absolute filesystem path to the workspace root */
+    path: string;
+    /** True when the workspace is recorded but not currently open in any kernel */
+    closed: boolean;
+}
+
+/**
+ * List all SiYuan workspaces known to the running kernel.
+ * Returns an empty array if the endpoint is unavailable (older versions / sandboxed builds).
+ */
+export function getWorkspaces(): Promise<WorkspaceInfo[]> {
+    return new Promise((resolve) => {
+        fetchPost("/api/system/getWorkspaces", {}, (response: any) => {
+            if (response && response.code === 0 && Array.isArray(response.data)) {
+                const list = response.data
+                    .filter((w: any) => w && typeof w.path === "string")
+                    .map((w: any) => ({ path: w.path as string, closed: !!w.closed }));
+                resolve(list);
+            } else {
+                resolve([]);
+            }
+        });
+    });
+}
+
+/**
+ * Copy files / directories at absolute filesystem paths into another absolute directory.
+ * Wraps /api/file/globalCopyFiles. The destination directory is created if needed.
+ * Each entry in `srcs` is copied into `destDir` using its basename (directories are copied recursively).
+ */
+export function globalCopyFiles(srcs: string[], destDir: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        fetchPost("/api/file/globalCopyFiles", { srcs, destDir }, (response: any) => {
+            if (response && response.code === 0) {
+                resolve();
+            } else {
+                reject(new Error(response?.msg || "Failed to globalCopyFiles"));
+            }
+        });
+    });
+}
+
 /**
  * Trigger SiYuan cloud sync.
  * Calls /api/sync/performSync to request the kernel to sync data.

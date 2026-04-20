@@ -1,18 +1,21 @@
 import { confirm, Dialog, showMessage } from "siyuan";
 import { ConfigManager } from "../core/config-manager";
-import { PLATFORM_LABELS, ProfileMeta, SYNC_BASE_PATH } from "../core/types";
+import { CONFIG_MODULES, CURRENT_WORKSPACE_TARGET_ID, PLATFORM_LABELS, ProfileMeta, SYNC_BASE_PATH } from "../core/types";
 import { getWorkspacePath } from "../core/siyuan-api";
 import { detectPlatform } from "../utils/platform";
 import { renderProfileCard } from "./profile-card";
 import { openSaveDialog } from "./save-dialog";
 import { openPreviewDialog, openUpdatePreviewDialog } from "./preview-dialog";
 import { openSettingsDialog } from "./settings-dialog";
+import { openPushDialog } from "./push-dialog";
+import { RemoteProfileMeta, SyncTarget, WorkspaceSync } from "../core/workspace-sync";
 
 /**
  * Open the main "Settings Sync Manager" dialog.
  */
 export function openMainDialog(
     configManager: ConfigManager,
+    workspaceSync: WorkspaceSync,
     i18n: any,
     isMobile: boolean = false,
 ): void {
@@ -47,12 +50,14 @@ export function openMainDialog(
             <div class="settings-sync__profiles-header">
                 <span class="settings-sync__profiles-title">${i18n.savedProfiles || "Saved Profiles"}</span>
                 <div class="settings-sync__filter">
+                    <select class="b3-select settings-sync__filter-select" data-action="workspace"></select>
                     <select class="b3-select settings-sync__filter-select" data-action="filter">
                         ${filterOptions}
                     </select>
                     <button class="b3-button b3-button--small b3-button--outline" data-action="refresh" title="${i18n.refresh || "Refresh"}">🔄</button>
                 </div>
             </div>
+            <div class="settings-sync__workspace-hint" data-container="ws-hint" style="display:none;"></div>
             <div class="settings-sync__profiles-list" data-container="profiles">
                 <div class="settings-sync__loading">${i18n.loading || "Loading..."}</div>
             </div>
@@ -62,20 +67,73 @@ export function openMainDialog(
 
     const container = dialog.element;
     const profilesContainer = container.querySelector("[data-container=\"profiles\"]") as HTMLElement;
+    const workspaceSelect = container.querySelector("[data-action=\"workspace\"]") as HTMLSelectElement;
+    const wsHint = container.querySelector("[data-container=\"ws-hint\"]") as HTMLElement;
 
     let currentFilter = "current";
+    /** Either CURRENT_WORKSPACE_TARGET_ID or a SyncTarget.id */
+    let currentWorkspaceId: string = CURRENT_WORKSPACE_TARGET_ID;
+    /** Cache of remote profiles for the currently viewed remote target */
+    let remoteProfilesCache: RemoteProfileMeta[] = [];
 
-    const refreshList = async () => {
-        try {
-            await configManager.refresh();
-            const profiles = await configManager.listProfiles();
-            renderProfiles(profiles);
-        } catch (e: any) {
-            profilesContainer.innerHTML = `<div class="settings-sync__error">${e.message}</div>`;
+    /** Re-populate the workspace selector based on the latest target list. */
+    const populateWorkspaceSelect = () => {
+        const targets = workspaceSync.listTargets();
+        const opts = [
+            `<option value="${CURRENT_WORKSPACE_TARGET_ID}">${escapeHtml(i18n.currentWorkspace || "Current Workspace")}</option>`,
+            ...targets.map((t) => {
+                const closed = t.closed ? ` (${escapeHtml(i18n.workspaceClosed || "closed")})` : "";
+                return `<option value="${escapeHtml(t.id)}">${escapeHtml(t.label)}${closed}</option>`;
+            }),
+        ].join("\n");
+        workspaceSelect.innerHTML = opts;
+        workspaceSelect.value = currentWorkspaceId;
+        // Hide the workspace selector entirely if globalCopyFiles already failed
+        // on this platform (e.g. iOS sandbox) and there are no remote targets.
+        if (workspaceSync.isUnsupported() && targets.length === 0) {
+            workspaceSelect.style.display = "none";
+        } else {
+            workspaceSelect.style.display = "";
         }
     };
 
-    const renderProfiles = (profiles: ProfileMeta[]) => {
+    const refreshList = async () => {
+        try {
+            if (currentWorkspaceId === CURRENT_WORKSPACE_TARGET_ID) {
+                wsHint.style.display = "none";
+                await configManager.refresh();
+                const profiles = await configManager.listProfiles();
+                renderProfiles(profiles);
+            } else {
+                const target = workspaceSync.getTarget(currentWorkspaceId);
+                if (!target) {
+                    // Target gone (e.g. removed from settings); revert to current workspace
+                    currentWorkspaceId = CURRENT_WORKSPACE_TARGET_ID;
+                    populateWorkspaceSelect();
+                    return refreshList();
+                }
+                wsHint.style.display = "";
+                wsHint.textContent = (i18n.viewingWorkspace || "Viewing remote workspace: ${name}")
+                    .replace("${name}", `${target.label} — ${target.profilesDir}`);
+                profilesContainer.innerHTML = `<div class="settings-sync__loading">${i18n.loading || "Loading..."}</div>`;
+                try {
+                    remoteProfilesCache = await workspaceSync.listRemoteProfiles(target);
+                } catch (e: any) {
+                    remoteProfilesCache = [];
+                    profilesContainer.innerHTML = `<div class="settings-sync__error">${escapeHtml(`${i18n.remoteListFailed || "Failed to read remote workspace"}: ${e?.message || e}`)}</div>`;
+                    if (workspaceSync.isUnsupported()) {
+                        wsHint.textContent = i18n.workspaceSyncUnsupported || "Local multi-workspace sync is not supported on this platform.";
+                    }
+                    return;
+                }
+                renderProfiles(remoteProfilesCache, target);
+            }
+        } catch (e: any) {
+            profilesContainer.innerHTML = `<div class="settings-sync__error">${escapeHtml(e.message)}</div>`;
+        }
+    };
+
+    const renderProfiles = (profiles: ProfileMeta[], remoteTarget?: SyncTarget) => {
         let filtered = profiles;
         if (currentFilter === "current") {
             filtered = profiles.filter(
@@ -92,13 +150,13 @@ export function openMainDialog(
 
         profilesContainer.innerHTML = filtered
             .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-            .map((p) => renderProfileCard(p, i18n))
+            .map((p) => renderProfileCard(p, i18n, remoteTarget?.label))
             .join("");
 
-        bindCardActions();
+        bindCardActions(remoteTarget);
     };
 
-    const bindCardActions = () => {
+    const bindCardActions = (remoteTarget?: SyncTarget) => {
         profilesContainer.querySelectorAll("[data-action]").forEach((btn) => {
             btn.addEventListener("click", async (e) => {
                 const el = e.currentTarget as HTMLElement;
@@ -108,7 +166,7 @@ export function openMainDialog(
 
                 switch (action) {
                     case "view":
-                        await handlePreview(id);
+                        await handlePreview(id, remoteTarget);
                         break;
                     case "more":
                         handleToggleMenu(id, el);
@@ -123,6 +181,16 @@ export function openMainDialog(
                     case "delete":
                         closeAllMenus();
                         await handleDelete(id);
+                        break;
+                    case "push":
+                        closeAllMenus();
+                        await handlePush(id);
+                        break;
+                    case "pull":
+                        if (remoteTarget) await handlePull(remoteTarget, id);
+                        break;
+                    case "apply-direct":
+                        if (remoteTarget) await handleApplyDirect(remoteTarget, id);
                         break;
                 }
             });
@@ -170,11 +238,29 @@ export function openMainDialog(
         }
     };
 
-    const handlePreview = async (profileId: string) => {
+    /**
+     * Preview a profile. For remote profiles we transparently pull-then-preview
+     * the local copy, then leave the imported file in place (the user can
+     * always delete it from the local view if undesired).
+     */
+    const handlePreview = async (profileId: string, remoteTarget?: SyncTarget) => {
+        if (remoteTarget) {
+            try {
+                await workspaceSync.pullProfile(remoteTarget, profileId);
+            } catch (e: any) {
+                showMessage(`${i18n.pullFailed || "Pull failed"}: ${e.message}`);
+                return;
+            }
+            const profiles = await configManager.listProfiles();
+            const profile = profiles.find((p) => p.id === profileId);
+            if (!profile) return;
+            openPreviewDialog(configManager, profile, i18n, isMobile);
+            return;
+        }
+
         const profiles = await configManager.listProfiles();
         const profile = profiles.find((p) => p.id === profileId);
         if (!profile) return;
-
         openPreviewDialog(configManager, profile, i18n, isMobile);
     };
 
@@ -285,6 +371,39 @@ export function openMainDialog(
         });
     };
 
+    const handlePush = async (profileId: string) => {
+        const profiles = await configManager.listProfiles();
+        const profile = profiles.find((p) => p.id === profileId);
+        if (!profile) return;
+        openPushDialog(workspaceSync, profileId, profile.name, i18n, isMobile);
+    };
+
+    const handlePull = async (target: SyncTarget, profileId: string) => {
+        try {
+            const meta = await workspaceSync.pullProfile(target, profileId);
+            showMessage((i18n.pullSuccess || "Pulled \"${name}\" to current workspace").replace("${name}", meta.name));
+        } catch (e: any) {
+            showMessage(`${i18n.pullFailed || "Pull failed"}: ${e.message}`);
+        }
+    };
+
+    const handleApplyDirect = async (target: SyncTarget, profileId: string) => {
+        const remote = remoteProfilesCache.find((p) => p.id === profileId);
+        if (!remote) return;
+
+        const msg = (i18n.confirmApply || "Apply configuration \"${name}\" to current device?")
+            .replace("${name}", remote.name);
+
+        confirm(i18n.applyDirectly || "Apply directly", msg, async () => {
+            try {
+                await workspaceSync.pullAndApply(target, profileId, CONFIG_MODULES);
+                showMessage(i18n.applySuccess || "Configuration applied. Some settings may require a restart.");
+            } catch (e: any) {
+                showMessage(`${i18n.applyFailed || "Apply failed"}: ${e.message}`);
+            }
+        });
+    };
+
     // Event: save new profile
     container.querySelector("[data-action=\"save-new\"]")?.addEventListener("click", () => {
         openSaveDialog(configManager, i18n, () => refreshList(), isMobile);
@@ -292,7 +411,7 @@ export function openMainDialog(
 
     // Event: open plugin settings dialog
     container.querySelector("[data-action=\"open-settings\"]")?.addEventListener("click", () => {
-        openSettingsDialog(configManager, i18n, isMobile);
+        openSettingsDialog(configManager, i18n, isMobile, () => populateWorkspaceSelect());
     });
 
     // Event: open profiles folder in system file manager
@@ -328,11 +447,36 @@ export function openMainDialog(
         refreshList();
     });
 
+    // Event: workspace selector change
+    workspaceSelect.addEventListener("change", (e) => {
+        currentWorkspaceId = (e.target as HTMLSelectElement).value;
+        refreshList();
+    });
+
     // Event: refresh button
-    container.querySelector("[data-action=\"refresh\"]")?.addEventListener("click", () => {
+    container.querySelector("[data-action=\"refresh\"]")?.addEventListener("click", async () => {
+        // Re-fetch the workspace list too, in case other workspaces appeared
+        await workspaceSync.init();
+        populateWorkspaceSelect();
         refreshList();
     });
 
     // Initial load
-    refreshList();
+    workspaceSync.init().then(() => {
+        populateWorkspaceSelect();
+        refreshList();
+    }).catch(() => {
+        populateWorkspaceSelect();
+        refreshList();
+    });
+}
+
+function escapeHtml(str: string): string {
+    if (str == null) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }

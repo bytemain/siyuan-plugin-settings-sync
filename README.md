@@ -19,6 +19,23 @@ The plugin stores configuration profiles as JSON files under `data/storage/petal
 
 **No additional cloud setup is required** — as long as SiYuan's built-in sync is enabled, profiles are synced automatically.
 
+## Multi-workspace sync (local)
+
+If you keep several SiYuan workspaces on the same machine, you can share profiles between them **without** going through cloud sync. The plugin uses SiYuan's `globalCopyFiles` kernel API to read and write each workspace's profiles directory directly on disk.
+
+In the manager:
+
+- Use the **Workspace** selector at the top of the profile list to browse other workspaces' profiles.
+- Each remote profile shows a **Pull** button (copy into the current workspace) and an **Apply directly** button (pull + apply in one step).
+- Each local profile gains a **Push to…** action in the ⋯ menu, allowing you to copy it to one or more other workspaces.
+- In **Settings**, you can optionally configure a **Shared Folder** (any absolute path) that acts as a hub between workspaces, and enable **Auto-push on save** to mirror every save / update to all known workspaces and the shared folder.
+
+Notes:
+
+- Local multi-workspace sync is desktop-only. On sandboxed platforms (iOS, Android, some Docker setups) the kernel rejects cross-workspace paths and the workspace selector is hidden after the first failure.
+- This feature does not require the other workspace to be running — the kernel performs file-level IO on disk.
+- Cloud sync still works as before; the new feature is purely additive.
+
 ## Usage
 
 1. Click the ⚙️ icon in the top toolbar (or use the command palette: "Open Settings Sync Manager")

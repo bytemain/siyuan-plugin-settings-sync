@@ -28,12 +28,20 @@ export class ConfigManager {
     private profilesCache: ProfileMeta[] = [];
 
     /** Plugin settings (skip keys, etc.) */
-    private settings: PluginSettings = { skipKeys: [...DEFAULT_SKIP_KEYS] };
+    private settings: PluginSettings = { skipKeys: [...DEFAULT_SKIP_KEYS], sharedFolder: "", autoPushOnSave: false };
+
+    /** Optional callback invoked with a profile id whenever a profile is saved or updated. */
+    private onProfilePersisted?: (profileId: string) => void;
 
     /** Initialize the config manager by loading settings and scanning profiles directory */
     async init(): Promise<void> {
         await this.loadSettings();
         await this.scanProfiles();
+    }
+
+    /** Register a side-effect callback fired after a profile is saved or updated. */
+    setOnProfilePersisted(cb: (profileId: string) => void): void {
+        this.onProfilePersisted = cb;
     }
 
     // ── Settings persistence ──────────────────────────────────────
@@ -42,8 +50,16 @@ export class ConfigManager {
     async loadSettings(): Promise<void> {
         try {
             const data = await getFile(SETTINGS_FILE_PATH);
-            if (data && typeof data === "object" && Array.isArray(data.skipKeys)) {
-                this.settings = { skipKeys: data.skipKeys };
+            if (data && typeof data === "object") {
+                if (Array.isArray(data.skipKeys)) {
+                    this.settings.skipKeys = data.skipKeys;
+                }
+                if (typeof data.sharedFolder === "string") {
+                    this.settings.sharedFolder = data.sharedFolder;
+                }
+                if (typeof data.autoPushOnSave === "boolean") {
+                    this.settings.autoPushOnSave = data.autoPushOnSave;
+                }
             }
         } catch {
             // Use defaults if settings file doesn't exist or can't be read
@@ -64,6 +80,23 @@ export class ConfigManager {
     /** Replace the skip keys list and persist */
     async setSkipKeys(keys: string[]): Promise<void> {
         this.settings.skipKeys = keys;
+        await this.saveSettings();
+    }
+
+    /** Get the configured shared-folder absolute path (empty string if unset) */
+    getSharedFolder(): string {
+        return this.settings.sharedFolder || "";
+    }
+
+    /** Get whether auto-push to other workspaces / shared folder is enabled */
+    getAutoPushOnSave(): boolean {
+        return !!this.settings.autoPushOnSave;
+    }
+
+    /** Update the workspace-sync related settings and persist */
+    async setWorkspaceSyncSettings(sharedFolder: string, autoPushOnSave: boolean): Promise<void> {
+        this.settings.sharedFolder = sharedFolder;
+        this.settings.autoPushOnSave = autoPushOnSave;
         await this.saveSettings();
     }
 
@@ -189,6 +222,9 @@ export class ConfigManager {
         // Update in-memory cache
         this.profilesCache.push(meta);
 
+        // Notify external listeners (e.g. WorkspaceSync auto-push)
+        this.onProfilePersisted?.(id);
+
         return meta;
     }
 
@@ -260,6 +296,9 @@ export class ConfigManager {
         if (idx >= 0) {
             this.profilesCache[idx] = { ...profile.meta };
         }
+
+        // Notify external listeners (e.g. WorkspaceSync auto-push)
+        this.onProfilePersisted?.(profileId);
     }
 
     /** Rename a profile */

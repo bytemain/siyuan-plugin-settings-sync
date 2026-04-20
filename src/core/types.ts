@@ -78,6 +78,16 @@ export const SYNC_BASE_PATH = "/data/storage/petal/siyuan-plugin-settings-sync";
 export const PROFILES_DIR = `${SYNC_BASE_PATH}/profiles`;
 export const SETTINGS_FILE_PATH = `${SYNC_BASE_PATH}/settings.json`;
 
+/** Workspace-relative cache directory for remote workspace profiles */
+export const REMOTE_CACHE_DIR = `${SYNC_BASE_PATH}/.remote-cache`;
+
+/**
+ * Trailing path segment (relative to a workspace root) where each workspace's
+ * profiles live on disk. Used together with `globalCopyFiles` to address
+ * other workspaces' profile directories.
+ */
+export const PROFILES_SUBPATH = "data/storage/petal/siyuan-plugin-settings-sync/profiles";
+
 /**
  * Default keys to skip during sync.
  * These are machine-specific settings whose values (e.g. absolute paths)
@@ -95,4 +105,20 @@ export const DEFAULT_SKIP_KEYS: string[] = [
 export interface PluginSettings {
     /** Keys to exclude when saving / applying profiles */
     skipKeys: string[];
+    /**
+     * Optional absolute path to a shared folder that acts as a hub between workspaces.
+     * When set, this folder is offered alongside other workspaces in the manager UI.
+     */
+    sharedFolder?: string;
+    /**
+     * If true, newly saved or updated profiles are also pushed to the shared folder
+     * (when configured) and to all other known SiYuan workspaces. Off by default.
+     */
+    autoPushOnSave?: boolean;
 }
+
+/** Identifier for the special shared-folder target in workspace-sync UI */
+export const SHARED_FOLDER_TARGET_ID = "__shared__";
+
+/** Identifier for the current workspace (default selection) */
+export const CURRENT_WORKSPACE_TARGET_ID = "__current__";
