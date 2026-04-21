@@ -245,10 +245,11 @@ export class WorkspaceSync {
     /**
      * Pull a profile and immediately apply the requested modules from it.
      * `applyProfile` from the config manager is reused after the pull.
+     * Returns the list of modules that were actually applied.
      */
-    async pullAndApply(target: SyncTarget, profileId: string, modules: ConfigModule[]): Promise<void> {
+    async pullAndApply(target: SyncTarget, profileId: string, modules: ConfigModule[]): Promise<ConfigModule[]> {
         await this.pullProfile(target, profileId);
-        await this.configManager.applyProfile(profileId, modules);
+        return this.configManager.applyProfile(profileId, modules);
     }
 
     /**

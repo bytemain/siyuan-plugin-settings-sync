@@ -24,7 +24,16 @@ export async function getWorkspacePath(): Promise<string> {
     return data?.conf?.system?.workspaceDir || "";
 }
 
-/** Apply a single configuration module using its corresponding set* API */
+/**
+ * Apply a single configuration module using its corresponding set* API.
+ *
+ * After a successful update, also patch `window.siyuan.config[module]` with
+ * the kernel's response (or the data we sent if the kernel returns nothing).
+ * This mirrors what SiYuan's own settings UI does after each `setXxx` call
+ * and is what allows changes to "feel" live for modules whose kernel handler
+ * does not broadcast a UI update — reopening the SiYuan settings dialog
+ * picks up the new values without requiring a restart.
+ */
 export function setConfModule(module: ConfigModule, data: any): Promise<void> {
     const api = MODULE_API_MAP[module];
     // setKeymap expects the keymap wrapped in a "data" property
@@ -32,6 +41,13 @@ export function setConfModule(module: ConfigModule, data: any): Promise<void> {
     return new Promise((resolve, reject) => {
         fetchPost(api, payload, (response: any) => {
             if (response.code === 0) {
+                try {
+                    syncWindowConfig(module, response?.data ?? data);
+                } catch (e) {
+                    // Patching window.siyuan.config is best-effort and must not
+                    // break the apply flow if the runtime layout is unexpected.
+                    console.debug(`[settings-sync] Failed to patch window.siyuan.config.${module}:`, e);
+                }
                 resolve();
             } else {
                 console.error(`[settings-sync] Failed to set ${module}:`, response);
@@ -39,6 +55,31 @@ export function setConfModule(module: ConfigModule, data: any): Promise<void> {
             }
         });
     });
+}
+
+/**
+ * Patch `window.siyuan.config[module]` with the freshly-applied data so that
+ * any subsequent reads from the in-memory config (e.g. when the user reopens
+ * SiYuan's settings dialog) reflect the new values without a restart.
+ *
+ * Exported for use by other apply helpers (e.g. partial / single-setting apply).
+ */
+export function syncWindowConfig(module: ConfigModule, data: any): void {
+    if (data == null) {
+        return;
+    }
+    const win = (typeof window !== "undefined" ? window : undefined) as any;
+    const cfg = win?.siyuan?.config;
+    if (!cfg) {
+        return;
+    }
+    if (module === "keymap") {
+        // setKeymap accepts/returns a wrapped { data: keymap } shape in some
+        // contexts; normalise to the bare keymap object.
+        cfg.keymap = data?.data ?? data;
+    } else {
+        cfg[module] = data;
+    }
 }
 
 /** Read a JSON file from SiYuan's data directory. Returns parsed JSON on success, or null if not found. */

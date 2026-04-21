@@ -48,6 +48,8 @@
     "versionMismatchWarning": "配置来自思源 ${source} 版本，当前版本为 ${current}，可能存在兼容性差异。",
     "saveSuccess": "配置已保存",
     "applySuccess": "配置已应用，部分设置可能需要重启生效",
+    "applySuccessLive": "配置已应用",
+    "applySuccessNeedsRestart": "配置已应用，以下模块需重启思源后完全生效：${modules}",
     "deleteSuccess": "配置已删除",
     "updateSuccess": "配置已更新",
     "renameSuccess": "重命名成功",
