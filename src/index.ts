@@ -52,7 +52,7 @@ export default class SettingsSyncPlugin extends Plugin {
         // Add top bar icon
         this.addTopBar({
             icon: "iconSettingsSync",
-            title: this.i18n.pluginName || "Settings Sync",
+            title: this.i18n?.pluginName || "Settings Sync",
             position: "right",
             callback: () => {
                 this.openManager();
