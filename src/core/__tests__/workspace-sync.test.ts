@@ -117,7 +117,7 @@ describe("WorkspaceSync.listRemoteProfiles", () => {
 
         expect(apiMocks.globalCopyFiles).toHaveBeenCalledWith(
             ["/ws/other/data/storage/petal/siyuan-plugin-settings-sync/profiles"],
-            "/ws/current/data/storage/petal/siyuan-plugin-settings-sync/.remote-cache/other",
+            "/data/storage/petal/siyuan-plugin-settings-sync/.remote-cache/other",
         );
         expect(list).toHaveLength(1);
         expect(list[0].id).toBe("p1");
@@ -156,7 +156,7 @@ describe("WorkspaceSync.pullProfile", () => {
         const meta = await ws.pullProfile(ws.listTargets()[0], "p1");
         expect(apiMocks.globalCopyFiles).toHaveBeenCalledWith(
             ["/ws/other/data/storage/petal/siyuan-plugin-settings-sync/profiles/p1.json"],
-            "/ws/current/data/storage/petal/siyuan-plugin-settings-sync/profiles",
+            "/data/storage/petal/siyuan-plugin-settings-sync/profiles",
         );
         expect(meta.id).toBe("p1");
         expect(cm.refreshCalls).toBe(1);
@@ -177,17 +177,12 @@ describe("WorkspaceSync.pullProfile", () => {
 });
 
 describe("WorkspaceSync.pushProfile", () => {
-    it("collects per-target failures without aborting the batch", async () => {
+    it("rejects cross-workspace targets client-side without calling globalCopyFiles", async () => {
         apiMocks.getWorkspacePath.mockResolvedValue("/ws/current");
         apiMocks.getWorkspaces.mockResolvedValue([
             { path: "/ws/a", closed: false },
             { path: "/ws/b", closed: false },
         ]);
-
-        // First call succeeds, second fails
-        apiMocks.globalCopyFiles
-            .mockResolvedValueOnce(undefined)
-            .mockRejectedValueOnce(new Error("denied"));
 
         const cm = new FakeConfigManager();
         const ws = new WorkspaceSync(cm as any);
@@ -195,9 +190,31 @@ describe("WorkspaceSync.pushProfile", () => {
 
         const targets = ws.listTargets();
         const result = await ws.pushProfile("p1", targets);
-        expect(result.failed).toHaveLength(1);
-        expect(result.failed[0].target.id).toBe("/ws/b");
-        expect(result.failed[0].error).toMatch(/denied/);
+        // Both targets are outside the current workspace, so both fail before the
+        // kernel call is even made.
+        expect(apiMocks.globalCopyFiles).not.toHaveBeenCalled();
+        expect(result.failed).toHaveLength(2);
+        expect(result.failed[0].error).toMatch(/Cross-workspace/i);
+        expect(result.failed[1].error).toMatch(/Cross-workspace/i);
+    });
+
+    it("pushes to a shared folder that lives inside the current workspace", async () => {
+        apiMocks.getWorkspacePath.mockResolvedValue("/ws/current");
+        apiMocks.getWorkspaces.mockResolvedValue([]);
+        apiMocks.globalCopyFiles.mockResolvedValue(undefined);
+
+        const cm = new FakeConfigManager();
+        cm.sharedFolder = "/ws/current/shared/profiles";
+        const ws = new WorkspaceSync(cm as any);
+        await ws.init();
+
+        const targets = ws.listTargets();
+        const result = await ws.pushProfile("p1", targets);
+        expect(result.failed).toHaveLength(0);
+        expect(apiMocks.globalCopyFiles).toHaveBeenCalledWith(
+            ["/ws/current/data/storage/petal/siyuan-plugin-settings-sync/profiles/p1.json"],
+            "/shared/profiles",
+        );
     });
 });
 

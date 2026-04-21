@@ -18,7 +18,6 @@ import {
 } from "./siyuan-api";
 import {
     basename,
-    joinWorkspacePath,
     normalizeWorkspacePath,
     remoteProfilesDir,
     trimTrailingSep,
@@ -163,15 +162,17 @@ export class WorkspaceSync {
         const cacheRel = this.cacheRelDir(target);
         await this.clearCache(cacheRel);
 
-        const localWs = await this.ensureCurrentWorkspace();
-        const cacheAbs = joinWorkspacePath(
-            localWs,
-            // strip leading "/" from REMOTE_CACHE_DIR-style paths to match join semantics
-            cacheRel.replace(/^\/+/, ""),
-        );
+        // Ensure we know the current workspace (for diagnostics / unsupported flag).
+        await this.ensureCurrentWorkspace();
 
         try {
-            await globalCopyFiles([target.profilesDir], cacheAbs);
+            // The kernel restricts `destDir` to a path *inside the current workspace*
+            // (see kernel/api/file.go → util.GetAbsPathInWorkspace). We therefore pass
+            // the workspace-relative cache path directly; passing an absolute path
+            // would be re-joined onto the workspace root and silently land in a
+            // junk sub-directory, which is why callers previously saw the cache
+            // appear empty even though `globalCopyFiles` reported success.
+            await globalCopyFiles([target.profilesDir], cacheRel);
             this.supported = true;
         } catch (e) {
             // Mark as unsupported the first time we hit a hard failure, so the UI
@@ -223,10 +224,13 @@ export class WorkspaceSync {
      * directory. Returns the imported profile metadata.
      */
     async pullProfile(target: SyncTarget, profileId: string): Promise<ProfileMeta> {
-        const localWs = await this.ensureCurrentWorkspace();
-        const localProfilesAbs = joinWorkspacePath(localWs, PROFILES_SUBPATH);
+        await this.ensureCurrentWorkspace();
+        // destDir must be workspace-relative – the kernel will resolve it under the
+        // current workspace root. Passing an absolute path would be re-joined onto
+        // the workspace root and silently land in a junk sub-directory.
+        const localProfilesRel = `/${PROFILES_SUBPATH}`;
 
-        await globalCopyFiles([this.remoteProfileFilePath(target, profileId)], localProfilesAbs);
+        await globalCopyFiles([this.remoteProfileFilePath(target, profileId)], localProfilesRel);
         this.supported = true;
 
         // Re-scan local profiles so the imported one is visible
@@ -250,15 +254,34 @@ export class WorkspaceSync {
     /**
      * Push a local profile to one or more sync targets. Errors per target are
      * collected and returned together rather than aborting the whole batch.
+     *
+     * NOTE: SiYuan's `globalCopyFiles` kernel API restricts the destination to a
+     * path *inside the current workspace*. Pushing to another workspace's
+     * profiles directory is therefore not possible from a single running kernel –
+     * such targets are reported as failures rather than being silently mis-copied
+     * into a junk sub-directory of the current workspace.
      */
     async pushProfile(profileId: string, targets: SyncTarget[]): Promise<{ failed: { target: SyncTarget; error: string }[] }> {
         const localWs = await this.ensureCurrentWorkspace();
-        const srcAbs = joinWorkspacePath(localWs, `${PROFILES_SUBPATH}/${profileId}.json`);
+        // The source path must be absolute. Build it from the current workspace root.
+        const srcAbs = `${trimTrailingSep(localWs)}${localWs.includes("\\") ? "\\" : "/"}${PROFILES_SUBPATH.split("/").join(localWs.includes("\\") ? "\\" : "/")}/${profileId}.json`;
+        const currentWsNorm = normalizeWorkspacePath(localWs);
 
         const failed: { target: SyncTarget; error: string }[] = [];
         for (const target of targets) {
+            // Determine whether the target's profiles dir is inside the current
+            // workspace. If not, the kernel will reject the copy (or worse, silently
+            // write to a path inside the current workspace) – surface a clear error.
+            const destRel = workspaceRelativeOrNull(target.profilesDir, currentWsNorm);
+            if (destRel === null) {
+                failed.push({
+                    target,
+                    error: "Cross-workspace push is not supported by the SiYuan kernel; open the target workspace and pull instead.",
+                });
+                continue;
+            }
             try {
-                await globalCopyFiles([srcAbs], target.profilesDir);
+                await globalCopyFiles([srcAbs], destRel);
                 this.supported = true;
             } catch (e: any) {
                 failed.push({ target, error: e?.message || String(e) });
@@ -332,4 +355,23 @@ async function removeRecursive(relPath: string): Promise<void> {
 /** Sanitize a workspace folder name for use as a directory key in the cache. */
 function sanitizeCacheKey(name: string): string {
     return name.replace(/[^a-zA-Z0-9._-]+/g, "_") || "workspace";
+}
+
+/**
+ * If `absDir` is inside `currentWsNorm`, return the workspace-relative path
+ * (with a leading "/" using POSIX separators, suitable for SiYuan API calls).
+ * Otherwise return null. Comparison is case-insensitive on Windows drive letters.
+ */
+function workspaceRelativeOrNull(absDir: string, currentWsNorm: string): string | null {
+    if (!currentWsNorm) return null;
+    const targetNorm = normalizeWorkspacePath(absDir);
+    const wsLower = currentWsNorm.toLowerCase();
+    const targetLower = targetNorm.toLowerCase();
+    if (targetLower !== wsLower && !targetLower.startsWith(wsLower + "/") && !targetLower.startsWith(wsLower + "\\")) {
+        return null;
+    }
+    let rel = targetNorm.slice(currentWsNorm.length);
+    rel = rel.replace(/\\/g, "/");
+    if (!rel.startsWith("/")) rel = "/" + rel;
+    return rel;
 }
