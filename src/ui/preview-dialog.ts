@@ -3,6 +3,7 @@ import { ConfigManager } from "../core/config-manager";
 import { CONFIG_MODULES, ConfigModule, ProfileMeta } from "../core/types";
 import { stripKeymapDefaults } from "../utils/keymap";
 import { getByPath, stripSkipKeys } from "../utils/skip-keys";
+import { buildApplySuccessMessage } from "../utils/apply-message";
 
 /**
  * Compute a flat key-value diff between two objects.
@@ -543,8 +544,8 @@ export function openPreviewDialog(
                     if (withBackup) {
                         await configManager.createAutoBackup(i18n.autoBackupPrefix || "Auto backup before apply");
                     }
-                    await configManager.applyProfile(profile.id, modules);
-                    showMessage(i18n.applySuccess || "Configuration applied. Some settings may require a restart.");
+                    const applied = await configManager.applyProfile(profile.id, modules);
+                    showMessage(buildApplySuccessMessage(applied, i18n));
                     dialog.destroy();
                 } catch (e: any) {
                     showMessage(`${i18n.applyFailed || "Apply failed"}: ${e.message}`);

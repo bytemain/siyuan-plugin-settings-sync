@@ -228,8 +228,14 @@ export class ConfigManager {
         return meta;
     }
 
-    /** Apply a saved profile's configuration to the current device */
-    async applyProfile(profileId: string, modules: ConfigModule[]): Promise<void> {
+    /**
+     * Apply a saved profile's configuration to the current device.
+     * Returns the list of modules that were successfully applied, so callers
+     * can show an accurate "may require restart" hint based on which modules
+     * actually got applied (vs being skipped because the profile didn't
+     * contain them).
+     */
+    async applyProfile(profileId: string, modules: ConfigModule[]): Promise<ConfigModule[]> {
         const profile = await this.getProfile(profileId);
         if (!profile) {
             throw new Error("Profile not found");
@@ -238,6 +244,7 @@ export class ConfigManager {
         // Fetch current conf once so we can preserve local skip-key values
         const confData = await getConf();
         const errors: string[] = [];
+        const applied: ConfigModule[] = [];
 
         for (const mod of modules) {
             if (profile.conf[mod] !== undefined) {
@@ -258,6 +265,7 @@ export class ConfigManager {
                     }
 
                     await setConfModule(mod, dataToApply);
+                    applied.push(mod);
                 } catch (e: any) {
                     console.error(`[settings-sync] Failed to apply module "${mod}":`, e);
                     errors.push(`${mod}: ${e.message}`);
@@ -268,6 +276,8 @@ export class ConfigManager {
         if (errors.length > 0) {
             throw new Error(errors.join("; "));
         }
+
+        return applied;
     }
 
     /** Update an existing profile with the current device's configuration */

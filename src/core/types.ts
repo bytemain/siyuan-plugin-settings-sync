@@ -26,6 +26,32 @@ export const MODULE_API_MAP: Record<ConfigModule, string> = {
     account: "/api/setting/setAccount",
 };
 
+/**
+ * Modules whose changes take effect immediately (no SiYuan restart required)
+ * because the kernel handler broadcasts a UI update event.
+ *
+ * Reference: `kernel/api/setting.go` in siyuan-note/siyuan.
+ *  - `setAppearance` / `setIcon` / `setTheme` broadcast `setAppearance`,
+ *    causing theme, language and icon changes to apply live.
+ *
+ * Other `setXxx` handlers (editor, keymap, fileTree, search, export,
+ * flashcard, ai, account) only persist to `conf.json` and update the
+ * in-memory `model.Conf`; the running UI keeps the previously rendered
+ * values until SiYuan is restarted. The plugin still patches
+ * `window.siyuan.config[mod]` after a successful apply (mirroring what
+ * SiYuan's own settings UI does), so reopening the SiYuan settings dialog
+ * shows the new values without restart, but other UI surfaces (top bar,
+ * shortcut bindings, etc.) require a restart to refresh.
+ */
+export const MODULE_LIVE_APPLY: ReadonlySet<ConfigModule> = new Set<ConfigModule>([
+    "appearance",
+]);
+
+/** Returns true if the given module's changes take effect without a SiYuan restart. */
+export function isLiveApplyModule(mod: ConfigModule): boolean {
+    return MODULE_LIVE_APPLY.has(mod);
+}
+
 /** Platform display labels */
 export const PLATFORM_LABELS: Record<Platform, string> = {
     all: "All",

@@ -9,6 +9,7 @@ import { openPreviewDialog, openUpdatePreviewDialog } from "./preview-dialog";
 import { openSettingsDialog } from "./settings-dialog";
 import { openPushDialog } from "./push-dialog";
 import { RemoteProfileMeta, SyncTarget, WorkspaceSync } from "../core/workspace-sync";
+import { buildApplySuccessMessage } from "../utils/apply-message";
 
 /**
  * Open the main "Settings Sync Manager" dialog.
@@ -396,8 +397,8 @@ export function openMainDialog(
 
         confirm(i18n.applyDirectly || "Apply directly", msg, async () => {
             try {
-                await workspaceSync.pullAndApply(target, profileId, CONFIG_MODULES);
-                showMessage(i18n.applySuccess || "Configuration applied. Some settings may require a restart.");
+                const applied = await workspaceSync.pullAndApply(target, profileId, CONFIG_MODULES);
+                showMessage(buildApplySuccessMessage(applied, i18n));
             } catch (e: any) {
                 showMessage(`${i18n.applyFailed || "Apply failed"}: ${e.message}`);
             }

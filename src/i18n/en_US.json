@@ -48,6 +48,8 @@
     "versionMismatchWarning": "Profile is from SiYuan ${source}, current version is ${current}. There may be compatibility differences.",
     "saveSuccess": "Configuration saved",
     "applySuccess": "Configuration applied. Some settings may require a restart.",
+    "applySuccessLive": "Configuration applied",
+    "applySuccessNeedsRestart": "Configuration applied. Restart SiYuan for these to take full effect: ${modules}",
     "deleteSuccess": "Profile deleted",
     "updateSuccess": "Configuration updated",
     "renameSuccess": "Renamed successfully",
