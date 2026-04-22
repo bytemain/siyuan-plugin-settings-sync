@@ -33,6 +33,16 @@ export async function getWorkspacePath(): Promise<string> {
  * and is what allows changes to "feel" live for modules whose kernel handler
  * does not broadcast a UI update — reopening the SiYuan settings dialog
  * picks up the new values without requiring a restart.
+ *
+ * Special behaviour for the `appearance` module: the kernel's
+ * `setAppearance` (see `kernel/api/setting.go` → `model.InitAppearance`)
+ * silently reverts `themeLight` / `themeDark` / `icon` to the built-in
+ * defaults when the requested asset is not installed on the current
+ * device. We compare the kernel's response against the request and reject
+ * the promise with an explanatory error, otherwise users (especially on
+ * mobile / HarmonyOS, where the kernel just reloads the page on
+ * `setAppearance`) would see "apply succeeded" yet the theme would
+ * still not match the saved profile — even after a restart.
  */
 export function setConfModule(module: ConfigModule, data: any): Promise<void> {
     const api = MODULE_API_MAP[module];
@@ -41,6 +51,22 @@ export function setConfModule(module: ConfigModule, data: any): Promise<void> {
     return new Promise((resolve, reject) => {
         fetchPost(api, payload, (response: any) => {
             if (response.code === 0) {
+                // For appearance, detect when the kernel silently reverted the
+                // requested theme/icon because it isn't installed on this
+                // device — otherwise the apply appears to succeed but the
+                // running config (and conf.json) keep the old/default values.
+                // See kernel/model/appearance.go: InitAppearance() falls back
+                // to "daylight" / "midnight" / "material" for missing assets.
+                if (module === "appearance" && response.data) {
+                    const reverted = detectAppearanceRevert(data, response.data);
+                    if (reverted.length > 0) {
+                        const msg = `Theme/icon not installed on this device: ${reverted.join(", ")}. ` +
+                            "Please install it from SiYuan's marketplace before syncing the appearance module.";
+                        console.warn(`[settings-sync] ${msg}`);
+                        reject(new Error(msg));
+                        return;
+                    }
+                }
                 try {
                     syncWindowConfig(module, response?.data ?? data);
                 } catch (e) {
@@ -55,6 +81,28 @@ export function setConfModule(module: ConfigModule, data: any): Promise<void> {
             }
         });
     });
+}
+
+/**
+ * Compare requested vs returned appearance fields and return a list of
+ * "field=requested" entries the kernel silently changed (because the asset
+ * isn't installed on the current device). Empty/missing requested fields
+ * are ignored — only meaningful overrides are checked.
+ */
+function detectAppearanceRevert(requested: any, returned: any): string[] {
+    if (!requested || typeof requested !== "object" || !returned || typeof returned !== "object") {
+        return [];
+    }
+    const fields = ["themeLight", "themeDark", "icon"] as const;
+    const reverted: string[] = [];
+    for (const f of fields) {
+        const want = requested[f];
+        const got = returned[f];
+        if (typeof want === "string" && want !== "" && typeof got === "string" && got !== want) {
+            reverted.push(`${f}=${want}`);
+        }
+    }
+    return reverted;
 }
 
 /**

@@ -81,6 +81,97 @@ describe("setConfModule", () => {
         });
         await expect(setConfModule("editor" as any, { fontSize: 16 })).resolves.toBeUndefined();
     });
+
+    it("rejects when the kernel silently reverts a missing appearance theme", async () => {
+        // Reproduces the HarmonyOS/mobile scenario: the requested theme is not
+        // installed locally, so SiYuan's InitAppearance() resets it to the
+        // built-in default. Without this guard, the apply would appear to
+        // succeed but the theme (and conf.json on disk) would not match.
+        const cfg = setupWindow();
+        cfg.appearance = { themeLight: "daylight", themeDark: "midnight", icon: "material" };
+
+        fetchPostMock.mockImplementation((url: string, _payload: any, cb: (r: any) => void) => {
+            expect(url).toBe("/api/setting/setAppearance");
+            cb({
+                code: 0,
+                data: { themeLight: "daylight", themeDark: "midnight", icon: "material" },
+            });
+        });
+
+        let caught: Error | undefined;
+        try {
+            await setConfModule("appearance" as any, {
+                themeLight: "Savor",
+                themeDark: "Savor",
+                icon: "material",
+            });
+        } catch (e: any) {
+            caught = e;
+        }
+        expect(caught).toBeDefined();
+        expect(caught!.message).toMatch(/themeLight=Savor/);
+        expect(caught!.message).toMatch(/themeDark=Savor/);
+        // `icon` was not reverted (material → material), so it must NOT be
+        // listed as a reverted field in the error message.
+        expect(caught!.message).not.toMatch(/icon=/);
+        // window.siyuan.config.appearance must not be patched on a revert
+        expect((globalThis as any).window.siyuan.config.appearance).toEqual({
+            themeLight: "daylight",
+            themeDark: "midnight",
+            icon: "material",
+        });
+    });
+
+    it("succeeds for appearance when the kernel echoes the requested theme", async () => {
+        const cfg = setupWindow();
+        cfg.appearance = { themeLight: "daylight", themeDark: "midnight", icon: "material" };
+
+        fetchPostMock.mockImplementation((_url: string, _payload: any, cb: (r: any) => void) => {
+            cb({
+                code: 0,
+                data: {
+                    themeLight: "Savor",
+                    themeDark: "Savor",
+                    icon: "material",
+                    lang: "en_US",
+                },
+            });
+        });
+
+        await expect(
+            setConfModule("appearance" as any, {
+                themeLight: "Savor",
+                themeDark: "Savor",
+                icon: "material",
+                lang: "en_US",
+            }),
+        ).resolves.toBeUndefined();
+        expect((globalThis as any).window.siyuan.config.appearance).toEqual({
+            themeLight: "Savor",
+            themeDark: "Savor",
+            icon: "material",
+            lang: "en_US",
+        });
+    });
+
+    it("ignores empty requested appearance fields when checking for revert", async () => {
+        // If the saved profile happens to lack a field (e.g. icon=""), don't
+        // mistake the kernel filling in a default for a revert.
+        setupWindow();
+        fetchPostMock.mockImplementation((_url: string, _payload: any, cb: (r: any) => void) => {
+            cb({
+                code: 0,
+                data: { themeLight: "daylight", themeDark: "midnight", icon: "material" },
+            });
+        });
+        await expect(
+            setConfModule("appearance" as any, {
+                themeLight: "daylight",
+                themeDark: "midnight",
+                icon: "",
+            }),
+        ).resolves.toBeUndefined();
+    });
 });
 
 describe("getWorkspaces", () => {
