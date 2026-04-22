@@ -33,6 +33,17 @@ export async function getWorkspacePath(): Promise<string> {
  * and is what allows changes to "feel" live for modules whose kernel handler
  * does not broadcast a UI update — reopening the SiYuan settings dialog
  * picks up the new values without requiring a restart.
+ *
+ * Special behaviour for the `appearance` module: the kernel's
+ * `setAppearance` handler (`kernel/api/setting.go`) delegates to
+ * `model.InitAppearance` (`kernel/model/appearance.go`), which silently
+ * reverts `themeLight` / `themeDark` / `icon` to the built-in defaults
+ * when the requested asset is not installed on the current device. We
+ * compare the kernel's response against the request and reject the
+ * promise with an explanatory error, otherwise users (especially on
+ * mobile / HarmonyOS, where the kernel just reloads the page on
+ * `setAppearance`) would see "apply succeeded" yet the theme would
+ * still not match the saved profile — even after a restart.
  */
 export function setConfModule(module: ConfigModule, data: any): Promise<void> {
     const api = MODULE_API_MAP[module];
@@ -41,6 +52,22 @@ export function setConfModule(module: ConfigModule, data: any): Promise<void> {
     return new Promise((resolve, reject) => {
         fetchPost(api, payload, (response: any) => {
             if (response.code === 0) {
+                // For appearance, detect when the kernel silently reverted the
+                // requested theme/icon because it isn't installed on this
+                // device — otherwise the apply appears to succeed but the
+                // running config (and conf.json) keep the old/default values.
+                // See kernel/model/appearance.go: InitAppearance() falls back
+                // to "daylight" / "midnight" / "material" for missing assets.
+                if (module === "appearance" && response.data) {
+                    const reverted = detectAppearanceRevert(data, response.data);
+                    if (reverted.length > 0) {
+                        const msg = `Theme/icon not installed on this device: ${reverted.join(", ")}. ` +
+                            "Please install it from SiYuan's marketplace before syncing the appearance module.";
+                        console.warn(`[settings-sync] ${msg}`);
+                        reject(new Error(msg));
+                        return;
+                    }
+                }
                 try {
                     syncWindowConfig(module, response?.data ?? data);
                 } catch (e) {
@@ -55,6 +82,98 @@ export function setConfModule(module: ConfigModule, data: any): Promise<void> {
             }
         });
     });
+}
+
+/**
+ * Describes a theme/icon that a profile is asking for but which is not
+ * installed on the current device. `label` is the friendliest display name
+ * we can find (preferring the source profile's own bilingual label like
+ * "流畅 (Savor)"); falls back to the bare directory name when unknown.
+ */
+export interface MissingAppearanceAsset {
+    field: "themeLight" | "themeDark" | "icon";
+    name: string;
+    label: string;
+}
+
+/**
+ * Pre-flight check for the `appearance` module: returns the list of
+ * theme/icon assets the profile is asking for but that are not installed
+ * on the current device.
+ *
+ * The kernel matches purely on the on-disk **directory name** (the `name`
+ * field of each entry in `lightThemes` / `darkThemes` / `icons`), regardless
+ * of UI language — see `kernel/model/appearance.go` `containTheme`. So this
+ * check compares `requested[field]` against `localAppearance[listKey][*].name`.
+ *
+ * Empty/missing requested fields are ignored — only meaningful overrides
+ * are validated. When a missing entry is detected we attempt to look up a
+ * friendlier label from the requested payload itself (which carries the
+ * source device's `lightThemes` / `darkThemes` / `icons` arrays, including
+ * their localized labels) so the resulting error tells the user exactly
+ * what to install from the marketplace.
+ */
+export function findMissingAppearanceAssets(
+    requested: any,
+    localAppearance: any,
+): MissingAppearanceAsset[] {
+    if (!requested || typeof requested !== "object" || !localAppearance || typeof localAppearance !== "object") {
+        return [];
+    }
+    const checks: { field: MissingAppearanceAsset["field"]; listKey: string }[] = [
+        { field: "themeLight", listKey: "lightThemes" },
+        { field: "themeDark", listKey: "darkThemes" },
+        { field: "icon", listKey: "icons" },
+    ];
+    const out: MissingAppearanceAsset[] = [];
+    for (const { field, listKey } of checks) {
+        const want = requested[field];
+        if (typeof want !== "string" || want === "") continue;
+        const installed = Array.isArray(localAppearance[listKey]) ? localAppearance[listKey] : [];
+        const found = installed.some((t: any) => t && t.name === want);
+        if (!found) {
+            // Prefer the source profile's bilingual label (e.g. "流畅 (Savor)")
+            // when available, otherwise fall back to the directory name.
+            const profileList = Array.isArray(requested[listKey]) ? requested[listKey] : [];
+            const entry = profileList.find((t: any) => t && t.name === want);
+            const label = entry && typeof entry.label === "string" && entry.label ? entry.label : want;
+            out.push({ field, name: want, label });
+        }
+    }
+    return out;
+}
+
+/**
+ * Build a single human-readable error message from a list of missing
+ * appearance assets. Exposed so callers (pre-flight in `applyProfile`,
+ * post-hoc detection in `setConfModule`) emit consistent wording.
+ */
+export function formatMissingAppearanceAssetsMessage(missing: MissingAppearanceAsset[]): string {
+    const parts = missing.map((m) => (m.label === m.name ? `${m.field}=${m.name}` : `${m.field}=${m.label}`));
+    return `Theme/icon not installed on this device: ${parts.join(", ")}. ` +
+        "Please install it from SiYuan's marketplace before syncing the appearance module.";
+}
+
+/**
+ * Compare requested vs returned appearance fields and return a list of
+ * "field=requested" entries the kernel silently changed (because the asset
+ * isn't installed on the current device). Empty/missing requested fields
+ * are ignored — only meaningful overrides are checked.
+ */
+function detectAppearanceRevert(requested: any, returned: any): string[] {
+    if (!requested || typeof requested !== "object" || !returned || typeof returned !== "object") {
+        return [];
+    }
+    const fields = ["themeLight", "themeDark", "icon"] as const;
+    const reverted: string[] = [];
+    for (const f of fields) {
+        const want = requested[f];
+        const got = returned[f];
+        if (typeof want === "string" && want !== "" && typeof got === "string" && got !== want) {
+            reverted.push(`${f}=${want}`);
+        }
+    }
+    return reverted;
 }
 
 /**
