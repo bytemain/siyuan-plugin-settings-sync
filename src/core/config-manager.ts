@@ -11,7 +11,7 @@ import {
     SaveProfileOptions,
     SETTINGS_FILE_PATH,
 } from "./types";
-import { getConf, getFile, performSync, putFile, readDir, removeFile, setConfModule } from "./siyuan-api";
+import { findMissingAppearanceAssets, formatMissingAppearanceAssetsMessage, getConf, getFile, performSync, putFile, readDir, removeFile, setConfModule } from "./siyuan-api";
 import { detectPlatform, getDeviceName } from "../utils/platform";
 import { generateUUID } from "../utils/uuid";
 import { filterCustomKeymap, isSparseKeymap, mergeKeymap } from "../utils/keymap";
@@ -262,6 +262,27 @@ export class ConfigManager {
                     // Preserve local values for machine-specific keys
                     if (confData.conf && confData.conf[mod] != null) {
                         preserveLocalSkipKeys(dataToApply, confData.conf[mod], mod, this.settings.skipKeys);
+                    }
+
+                    // Pre-flight for appearance: the kernel silently reverts
+                    // themeLight/themeDark/icon to built-in defaults when the
+                    // requested asset isn't installed locally (see
+                    // kernel/model/appearance.go → InitAppearance). On mobile
+                    // / HarmonyOS the kernel just reloads the page on
+                    // `setAppearance`, which can mask the post-hoc revert
+                    // detection inside `setConfModule`. Catching it here —
+                    // before POSTing — guarantees a clear, actionable error
+                    // listing exactly which themes/icons need to be installed
+                    // from the marketplace, with friendly bilingual labels
+                    // when the source profile carries them.
+                    if (mod === "appearance") {
+                        const localAppearance = confData.conf?.appearance;
+                        if (localAppearance) {
+                            const missing = findMissingAppearanceAssets(dataToApply, localAppearance);
+                            if (missing.length > 0) {
+                                throw new Error(formatMissingAppearanceAssetsMessage(missing));
+                            }
+                        }
                     }
 
                     await setConfModule(mod, dataToApply);

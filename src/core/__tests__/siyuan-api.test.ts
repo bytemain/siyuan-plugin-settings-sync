@@ -6,7 +6,7 @@ vi.mock("siyuan", () => ({
     fetchPost: (...args: any[]) => fetchPostMock(...args),
 }));
 
-import { getWorkspaces, globalCopyFiles, setConfModule } from "../siyuan-api";
+import { getWorkspaces, globalCopyFiles, setConfModule, findMissingAppearanceAssets, formatMissingAppearanceAssetsMessage } from "../siyuan-api";
 
 beforeEach(() => {
     fetchPostMock.mockReset();
@@ -236,5 +236,84 @@ describe("globalCopyFiles", () => {
             cb({ code: -1 });
         });
         await expect(globalCopyFiles(["/a"], "/dest")).rejects.toThrow(/Failed to globalCopyFiles/);
+    });
+});
+
+describe("findMissingAppearanceAssets", () => {
+    const localAppearance = {
+        lightThemes: [{ name: "daylight", label: "daylight (Built-in)" }],
+        darkThemes: [{ name: "midnight", label: "midnight (Built-in)" }],
+        icons: [{ name: "material", label: "material (Built-in)" }],
+    };
+
+    it("returns [] when all requested assets are installed", () => {
+        const requested = { themeLight: "daylight", themeDark: "midnight", icon: "material" };
+        expect(findMissingAppearanceAssets(requested, localAppearance)).toEqual([]);
+    });
+
+    it("flags themes/icons that are not installed locally", () => {
+        const requested = {
+            themeLight: "Savor",
+            themeDark: "Savor",
+            icon: "material",
+        };
+        const missing = findMissingAppearanceAssets(requested, localAppearance);
+        expect(missing).toEqual([
+            { field: "themeLight", name: "Savor", label: "Savor" },
+            { field: "themeDark", name: "Savor", label: "Savor" },
+        ]);
+    });
+
+    it("prefers the source profile's bilingual label for missing assets", () => {
+        // Profile carries the source device's lightThemes / darkThemes / icons
+        // arrays with localized labels; surface those in the error so users
+        // know exactly what to install.
+        const requested = {
+            themeLight: "Savor",
+            themeDark: "Savor",
+            icon: "ant",
+            lightThemes: [{ name: "Savor", label: "流畅 (Savor)" }],
+            darkThemes: [{ name: "Savor", label: "流畅 (Savor)" }],
+            icons: [{ name: "ant", label: "Ant Design" }],
+        };
+        const missing = findMissingAppearanceAssets(requested, localAppearance);
+        expect(missing).toEqual([
+            { field: "themeLight", name: "Savor", label: "流畅 (Savor)" },
+            { field: "themeDark", name: "Savor", label: "流畅 (Savor)" },
+            { field: "icon", name: "ant", label: "Ant Design" },
+        ]);
+    });
+
+    it("ignores empty / non-string requested fields", () => {
+        const requested = { themeLight: "", themeDark: undefined, icon: null };
+        expect(findMissingAppearanceAssets(requested, localAppearance)).toEqual([]);
+    });
+
+    it("ignores requested fields with no corresponding installed list", () => {
+        // If the local conf doesn't expose a list (older kernel?), don't
+        // produce false positives — the post-hoc revert detection still
+        // catches genuine misses.
+        const requested = { themeLight: "Savor" };
+        expect(findMissingAppearanceAssets(requested, {})).toEqual([
+            { field: "themeLight", name: "Savor", label: "Savor" },
+        ]);
+    });
+
+    it("returns [] when inputs are not objects", () => {
+        expect(findMissingAppearanceAssets(null, localAppearance)).toEqual([]);
+        expect(findMissingAppearanceAssets({ themeLight: "Savor" }, null)).toEqual([]);
+    });
+});
+
+describe("formatMissingAppearanceAssetsMessage", () => {
+    it("uses friendly labels when they differ from the bare directory name", () => {
+        const msg = formatMissingAppearanceAssetsMessage([
+            { field: "themeLight", name: "Savor", label: "流畅 (Savor)" },
+            { field: "icon", name: "ant", label: "ant" },
+        ]);
+        expect(msg).toMatch(/themeLight=流畅 \(Savor\)/);
+        // When label === name we keep the compact "field=name" form.
+        expect(msg).toMatch(/icon=ant/);
+        expect(msg).toMatch(/marketplace/);
     });
 });
