@@ -66,6 +66,7 @@ data/storage/petal/siyuan-plugin-settings-sync/
 | 导出设置 | 导出偏好 |
 | 闪卡设置 | 闪卡功能设置 |
 | AI 设置 | AI 提供商和模型设置 |
+| 布局 | 已保存的界面布局（思源布局菜单中的布局） |
 
 ## 开发
 

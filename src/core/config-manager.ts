@@ -4,6 +4,7 @@ import {
     CONFIG_MODULES,
     DEFAULT_SKIP_KEYS,
     DeviceInfo,
+    LOCAL_LAYOUTS_KEY,
     PluginSettings,
     Profile,
     ProfileMeta,
@@ -11,11 +12,27 @@ import {
     SaveProfileOptions,
     SETTINGS_FILE_PATH,
 } from "./types";
-import { findMissingAppearanceAssets, formatMissingAppearanceAssetsMessage, getConf, getFile, performSync, putFile, readDir, removeFile, setConfModule } from "./siyuan-api";
+import { findMissingAppearanceAssets, formatMissingAppearanceAssetsMessage, getConf, getFile, getLocalStorage, performSync, putFile, readDir, removeFile, setConfModule } from "./siyuan-api";
 import { detectPlatform, getDeviceName } from "../utils/platform";
 import { generateUUID } from "../utils/uuid";
 import { filterCustomKeymap, isSparseKeymap, mergeKeymap } from "../utils/keymap";
 import { preserveLocalSkipKeys, setByPath, stripSkipKeys } from "../utils/skip-keys";
+
+/**
+ * Read the saved UI layouts from the workspace local storage.
+ * Returns `{ layouts: [...] }` when at least one layout is saved, or null when
+ * the user has never saved a layout (so the module is simply omitted from
+ * profiles instead of storing / applying an empty list that would wipe the
+ * target device's layouts).
+ */
+async function captureLayouts(): Promise<{ layouts: any[] } | null> {
+    const storage = await getLocalStorage();
+    const layouts = storage[LOCAL_LAYOUTS_KEY];
+    if (!Array.isArray(layouts) || layouts.length === 0) {
+        return null;
+    }
+    return { layouts: JSON.parse(JSON.stringify(layouts)) };
+}
 
 /**
  * ConfigManager handles all CRUD operations for configuration profiles.
@@ -161,6 +178,12 @@ export class ConfigManager {
         const confData = await getConf();
         const conf: Partial<Record<ConfigModule, any>> = {};
         for (const mod of modules) {
+            if (mod === "layout") {
+                // Layouts live in local storage, not conf.json
+                const layoutData = await captureLayouts();
+                if (layoutData) conf[mod] = layoutData;
+                continue;
+            }
             if (confData.conf && confData.conf[mod] != null) {
                 let modData = JSON.parse(JSON.stringify(confData.conf[mod]));
                 if (filterKeymap && mod === "keymap") {
@@ -179,6 +202,12 @@ export class ConfigManager {
         const confData = await getConf();
         const conf: Partial<Record<ConfigModule, any>> = {};
         for (const mod of modules) {
+            if (mod === "layout") {
+                // Layouts live in local storage, not conf.json
+                const layoutData = await captureLayouts();
+                if (layoutData) conf[mod] = layoutData;
+                continue;
+            }
             if (confData.conf && confData.conf[mod] != null) {
                 let modData = JSON.parse(JSON.stringify(confData.conf[mod]));
                 // For keymap, only save user-customized bindings (filter out defaults)
@@ -402,8 +431,10 @@ export class ConfigManager {
      * @param value        The value to set
      */
     async applySingleSetting(mod: ConfigModule, settingPath: string, value: any): Promise<void> {
-        const confData = await getConf();
-        const currentModData = confData?.conf?.[mod];
+        // Layouts live in local storage, not conf.json
+        const currentModData = mod === "layout"
+            ? (await captureLayouts()) ?? { layouts: [] }
+            : (await getConf())?.conf?.[mod];
         if (currentModData == null) {
             throw new Error(`Module "${mod}" not found in current config`);
         }

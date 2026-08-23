@@ -12,6 +12,7 @@ const apiMocks = vi.hoisted(() => ({
     removeFile: vi.fn(),
     setConfModule: vi.fn(),
     performSync: vi.fn(),
+    getLocalStorage: vi.fn(),
 }));
 
 vi.mock("../siyuan-api", async () => {
@@ -118,5 +119,43 @@ describe("ConfigManager.applyProfile — appearance pre-flight", () => {
 
         await expect(mgr.applyProfile("p3", ["editor" as any])).resolves.toEqual(["editor"]);
         expect(apiMocks.setConfModule).toHaveBeenCalledWith("editor", expect.objectContaining({ fontSize: 18 }));
+    });
+});
+
+describe("ConfigManager — layout module", () => {
+    it("captureCurrentConf reads layouts from local storage, not conf.json", async () => {
+        const mgr = new ConfigManager();
+        apiMocks.getConf.mockResolvedValue({ conf: { editor: { fontSize: 16 } } });
+        apiMocks.getLocalStorage.mockResolvedValue({
+            "local-layouts": [{ name: "work", time: 1, layout: { direction: "lr" } }],
+        });
+
+        const conf = await mgr.getCurrentConf(["layout" as any]);
+        expect(conf.layout).toEqual({ layouts: [{ name: "work", time: 1, layout: { direction: "lr" } }] });
+    });
+
+    it("omits the layout module when no layout has been saved", async () => {
+        const mgr = new ConfigManager();
+        apiMocks.getLocalStorage.mockResolvedValue({});
+
+        const conf = await mgr.getCurrentConf(["layout" as any]);
+        expect(conf.layout).toBeUndefined();
+    });
+
+    it("applyProfile routes layout data through setConfModule", async () => {
+        const profile = {
+            id: "p4",
+            meta: { id: "p4", name: "n", platform: "all", createdAt: "", updatedAt: "", sourceDevice: "", siyuanVersion: "", description: "" },
+            conf: { layout: { layouts: [{ name: "work", time: 1, layout: {} }] } },
+        };
+        const mgr = installManagerWithProfile(profile);
+        apiMocks.getConf.mockResolvedValue({ conf: {} });
+        apiMocks.setConfModule.mockResolvedValue(undefined);
+
+        await expect(mgr.applyProfile("p4", ["layout" as any])).resolves.toEqual(["layout"]);
+        expect(apiMocks.setConfModule).toHaveBeenCalledWith(
+            "layout",
+            expect.objectContaining({ layouts: [{ name: "work", time: 1, layout: {} }] }),
+        );
     });
 });

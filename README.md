@@ -66,6 +66,7 @@ data/storage/petal/siyuan-plugin-settings-sync/
 | Export | Export preferences |
 | Flashcard | Flashcard settings |
 | AI | AI provider and model settings |
+| Layouts | Saved UI layouts (from SiYuan's layout menu) |
 
 ## Development
 

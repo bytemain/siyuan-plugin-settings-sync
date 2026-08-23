@@ -6,15 +6,27 @@
 export type Platform = "all" | "windows" | "darwin" | "linux" | "android" | "ios" | "harmony" | "docker";
 
 /** Configuration module keys that can be synced */
-export type ConfigModule = "editor" | "keymap" | "appearance" | "fileTree" | "search" | "export" | "flashcard" | "ai" | "account";
+export type ConfigModule = "editor" | "keymap" | "appearance" | "fileTree" | "search" | "export" | "flashcard" | "ai" | "account" | "layout";
 
 /** All available config modules */
 export const CONFIG_MODULES: ConfigModule[] = [
-    "editor", "keymap", "appearance", "fileTree", "search", "export", "flashcard", "ai", "account"
+    "editor", "keymap", "appearance", "fileTree", "search", "export", "flashcard", "ai", "account", "layout"
 ];
 
-/** Mapping from config module key to the SiYuan API endpoint for applying that module */
-export const MODULE_API_MAP: Record<ConfigModule, string> = {
+/**
+ * Key in SiYuan's workspace local storage (`data/storage/local.json`) that
+ * holds the list of saved UI layouts (`ISaveLayout[]`: name / time / layout /
+ * filesPaths). The `layout` module syncs this list; applying a specific layout
+ * from the list is still done through SiYuan's own layout menu.
+ */
+export const LOCAL_LAYOUTS_KEY = "local-layouts";
+
+/**
+ * Mapping from config module key to the SiYuan API endpoint for applying that module.
+ * The `layout` module is intentionally absent: layouts live in local storage,
+ * not conf.json, and are applied via /api/storage/setLocalStorageVal instead.
+ */
+export const MODULE_API_MAP: Record<Exclude<ConfigModule, "layout">, string> = {
     editor: "/api/setting/setEditor",
     keymap: "/api/setting/setKeymap",
     appearance: "/api/setting/setAppearance",
@@ -42,9 +54,13 @@ export const MODULE_API_MAP: Record<ConfigModule, string> = {
  * SiYuan's own settings UI does), so reopening the SiYuan settings dialog
  * shows the new values without restart, but other UI surfaces (top bar,
  * shortcut bindings, etc.) require a restart to refresh.
+ * `layout` is also live: the apply path patches
+ * `window.siyuan.storage["local-layouts"]`, and SiYuan's layout menu reads
+ * that list every time it opens, so newly synced layouts show up immediately.
  */
 export const MODULE_LIVE_APPLY: ReadonlySet<ConfigModule> = new Set<ConfigModule>([
     "appearance",
+    "layout",
 ]);
 
 /** Returns true if the given module's changes take effect without a SiYuan restart. */
