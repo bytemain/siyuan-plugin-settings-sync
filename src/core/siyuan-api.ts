@@ -122,6 +122,11 @@ export interface MissingAppearanceAsset {
  * of UI language — see `kernel/model/appearance.go` `containTheme`. So this
  * check compares `requested[field]` against `localAppearance[listKey][*].name`.
  *
+ * Note the `icons` list changed shape in SiYuan 3.7.0: up to 3.6.x it is a
+ * plain string array of directory names, from 3.7.0 on it is an array of
+ * `{ name, label }` objects. Both forms are accepted here, for both the
+ * installed list and the label lookup.
+ *
  * Empty/missing requested fields are ignored — only meaningful overrides
  * are validated. When a missing entry is detected we attempt to look up a
  * friendlier label from the requested payload itself (which carries the
@@ -146,17 +151,27 @@ export function findMissingAppearanceAssets(
         const want = requested[field];
         if (typeof want !== "string" || want === "") continue;
         const installed = Array.isArray(localAppearance[listKey]) ? localAppearance[listKey] : [];
-        const found = installed.some((t: any) => t && t.name === want);
+        const found = installed.some((t: any) => entryName(t) === want);
         if (!found) {
             // Prefer the source profile's bilingual label (e.g. "流畅 (Savor)")
             // when available, otherwise fall back to the directory name.
             const profileList = Array.isArray(requested[listKey]) ? requested[listKey] : [];
-            const entry = profileList.find((t: any) => t && t.name === want);
+            const entry = profileList.find((t: any) => entryName(t) === want);
             const label = entry && typeof entry.label === "string" && entry.label ? entry.label : want;
             out.push({ field, name: want, label });
         }
     }
     return out;
+}
+
+/**
+ * Directory name of a theme/icon list entry. SiYuan ≤3.6.x serializes
+ * `icons` as plain strings; ≥3.7.0 uses `{ name, label }` objects.
+ */
+function entryName(entry: any): string | undefined {
+    if (typeof entry === "string") return entry;
+    if (entry && typeof entry === "object" && typeof entry.name === "string") return entry.name;
+    return undefined;
 }
 
 /**

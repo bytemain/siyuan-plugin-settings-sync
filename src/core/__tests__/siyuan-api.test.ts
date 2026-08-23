@@ -348,6 +348,26 @@ describe("findMissingAppearanceAssets", () => {
         expect(findMissingAppearanceAssets(null, localAppearance)).toEqual([]);
         expect(findMissingAppearanceAssets({ themeLight: "Savor" }, null)).toEqual([]);
     });
+
+    it("accepts string-form icon lists (SiYuan ≤3.6.x)", () => {
+        // Up to 3.6.x the kernel serializes `icons` as plain directory names;
+        // the pre-flight must not flag every icon as missing there.
+        const requested = { themeLight: "daylight", themeDark: "midnight", icon: "material" };
+        const legacyLocal = {
+            lightThemes: [{ name: "daylight", label: "daylight (Built-in)" }],
+            darkThemes: [{ name: "midnight", label: "midnight (Built-in)" }],
+            icons: ["material", "ant"],
+        };
+        expect(findMissingAppearanceAssets(requested, legacyLocal)).toEqual([]);
+    });
+
+    it("still flags genuinely missing icons in string-form lists", () => {
+        const requested = { icon: "hades" };
+        const legacyLocal = { icons: ["material", "ant"] };
+        expect(findMissingAppearanceAssets(requested, legacyLocal)).toEqual([
+            { field: "icon", name: "hades", label: "hades" },
+        ]);
+    });
 });
 
 describe("formatMissingAppearanceAssetsMessage", () => {
