@@ -397,8 +397,8 @@ export function openMainDialog(
 
         confirm(i18n.applyDirectly || "Apply directly", msg, async () => {
             try {
-                const applied = await workspaceSync.pullAndApply(target, profileId, CONFIG_MODULES);
-                showMessage(buildApplySuccessMessage(applied, i18n));
+                const result = await workspaceSync.pullAndApply(target, profileId, CONFIG_MODULES);
+                showMessage(buildApplySuccessMessage(result, i18n));
             } catch (e: any) {
                 showMessage(`${i18n.applyFailed || "Apply failed"}: ${e.message}`);
             }

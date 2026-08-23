@@ -51,6 +51,8 @@
     "applySuccess": "配置已应用，部分设置可能需要重启生效",
     "applySuccessLive": "配置已应用",
     "applySuccessNeedsRestart": "配置已应用，以下模块需重启思源后完全生效：${modules}",
+    "applyMigratedNote": "已自动迁移到当前思源版本的配置结构：${modules}（旧版专有项已忽略）",
+    "applySkippedNote": "与当前思源版本不兼容，已跳过：${modules}",
     "deleteSuccess": "配置已删除",
     "updateSuccess": "配置已更新",
     "renameSuccess": "重命名成功",

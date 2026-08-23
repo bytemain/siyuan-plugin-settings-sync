@@ -544,8 +544,8 @@ export function openPreviewDialog(
                     if (withBackup) {
                         await configManager.createAutoBackup(i18n.autoBackupPrefix || "Auto backup before apply");
                     }
-                    const applied = await configManager.applyProfile(profile.id, modules);
-                    showMessage(buildApplySuccessMessage(applied, i18n));
+                    const result = await configManager.applyProfile(profile.id, modules);
+                    showMessage(buildApplySuccessMessage(result, i18n));
                     dialog.destroy();
                 } catch (e: any) {
                     showMessage(`${i18n.applyFailed || "Apply failed"}: ${e.message}`);

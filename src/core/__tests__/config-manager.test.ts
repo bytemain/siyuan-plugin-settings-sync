@@ -99,7 +99,7 @@ describe("ConfigManager.applyProfile — appearance pre-flight", () => {
         apiMocks.getConf.mockResolvedValue({ conf: { appearance: localAppearance } });
         apiMocks.setConfModule.mockResolvedValue(undefined);
 
-        await expect(mgr.applyProfile("p2", ["appearance" as any])).resolves.toEqual(["appearance"]);
+        await expect(mgr.applyProfile("p2", ["appearance" as any])).resolves.toMatchObject({ applied: ["appearance"], migrated: [], skipped: [] });
         expect(apiMocks.setConfModule).toHaveBeenCalledTimes(1);
         expect(apiMocks.setConfModule).toHaveBeenCalledWith(
             "appearance",
@@ -117,7 +117,7 @@ describe("ConfigManager.applyProfile — appearance pre-flight", () => {
         apiMocks.getConf.mockResolvedValue({ conf: { editor: { fontSize: 16 } } });
         apiMocks.setConfModule.mockResolvedValue(undefined);
 
-        await expect(mgr.applyProfile("p3", ["editor" as any])).resolves.toEqual(["editor"]);
+        await expect(mgr.applyProfile("p3", ["editor" as any])).resolves.toMatchObject({ applied: ["editor"], migrated: [], skipped: [] });
         expect(apiMocks.setConfModule).toHaveBeenCalledWith("editor", expect.objectContaining({ fontSize: 18 }));
     });
 });
@@ -142,7 +142,7 @@ describe("ConfigManager — ai module cross-version migration", () => {
         });
         apiMocks.setConfModule.mockResolvedValue(undefined);
 
-        await expect(mgr.applyProfile("a1", ["ai" as any])).resolves.toEqual(["ai"]);
+        await expect(mgr.applyProfile("a1", ["ai" as any])).resolves.toMatchObject({ applied: ["ai"], migrated: ["ai"], skipped: [] });
         const applied = apiMocks.setConfModule.mock.calls[0][1];
         expect(applied.providers).toHaveLength(1);
         expect(applied.providers[0]).toMatchObject({
@@ -177,7 +177,7 @@ describe("ConfigManager — ai module cross-version migration", () => {
         });
         apiMocks.setConfModule.mockResolvedValue(undefined);
 
-        await expect(mgr.applyProfile("a2", ["ai" as any])).resolves.toEqual(["ai"]);
+        await expect(mgr.applyProfile("a2", ["ai" as any])).resolves.toMatchObject({ applied: ["ai"], migrated: ["ai"], skipped: [] });
         const applied = apiMocks.setConfModule.mock.calls[0][1];
         expect(applied.openAI).toMatchObject({
             apiBaseURL: "https://api.deepseek.com/v1",
@@ -199,7 +199,7 @@ describe("ConfigManager — ai module cross-version migration", () => {
         const mgr = installManagerWithProfile(profile);
         apiMocks.getConf.mockResolvedValue({ conf: { ai: { openAI: { apiKey: "k" } } } });
 
-        await expect(mgr.applyProfile("a3", ["ai" as any])).resolves.toEqual([]);
+        await expect(mgr.applyProfile("a3", ["ai" as any])).resolves.toMatchObject({ applied: [], migrated: [], skipped: ["ai"] });
         expect(apiMocks.setConfModule).not.toHaveBeenCalled();
     });
 
@@ -213,7 +213,7 @@ describe("ConfigManager — ai module cross-version migration", () => {
         apiMocks.getConf.mockResolvedValue({ conf: { ai: { providers: [] } } });
         apiMocks.setConfModule.mockResolvedValue(undefined);
 
-        await expect(mgr.applyProfile("a4", ["ai" as any])).resolves.toEqual(["ai"]);
+        await expect(mgr.applyProfile("a4", ["ai" as any])).resolves.toMatchObject({ applied: ["ai"], migrated: [], skipped: [] });
         expect(apiMocks.setConfModule).toHaveBeenCalledWith("ai", expect.objectContaining({ providers: expect.any(Array) }));
     });
 });
@@ -248,7 +248,7 @@ describe("ConfigManager — layout module", () => {
         apiMocks.getConf.mockResolvedValue({ conf: {} });
         apiMocks.setConfModule.mockResolvedValue(undefined);
 
-        await expect(mgr.applyProfile("p4", ["layout" as any])).resolves.toEqual(["layout"]);
+        await expect(mgr.applyProfile("p4", ["layout" as any])).resolves.toMatchObject({ applied: ["layout"], migrated: [], skipped: [] });
         expect(apiMocks.setConfModule).toHaveBeenCalledWith(
             "layout",
             expect.objectContaining({ layouts: [{ name: "work", time: 1, layout: {} }] }),

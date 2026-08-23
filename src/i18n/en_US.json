@@ -51,6 +51,8 @@
     "applySuccess": "Configuration applied. Some settings may require a restart.",
     "applySuccessLive": "Configuration applied",
     "applySuccessNeedsRestart": "Configuration applied. Restart SiYuan for these to take full effect: ${modules}",
+    "applyMigratedNote": "Migrated to this SiYuan version's config structure: ${modules} (legacy-only fields were ignored)",
+    "applySkippedNote": "Not applicable on this SiYuan version, skipped: ${modules}",
     "deleteSuccess": "Profile deleted",
     "updateSuccess": "Configuration updated",
     "renameSuccess": "Renamed successfully",
