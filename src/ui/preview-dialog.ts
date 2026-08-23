@@ -4,6 +4,7 @@ import { CONFIG_MODULES, ConfigModule, ProfileMeta } from "../core/types";
 import { stripKeymapDefaults } from "../utils/keymap";
 import { getByPath, stripSkipKeys } from "../utils/skip-keys";
 import { buildApplySuccessMessage } from "../utils/apply-message";
+import { buildCompatWarnings } from "../utils/compat-warning";
 
 /**
  * Compute a flat key-value diff between two objects.
@@ -432,7 +433,15 @@ export function openPreviewDialog(
                 </label>`;
             }).join("\n");
 
+            // Platform / SiYuan-version mismatch warnings (shown before the
+            // user decides which modules to apply)
+            const warnings = buildCompatWarnings(profile, configManager.getDeviceInfo(), i18n);
+            const warningsHtml = warnings.length > 0
+                ? `<div class="settings-sync__warning">⚠️ ${warnings.map(escapeHtml).join("<br>")}</div>`
+                : "";
+
             container.innerHTML = `
+                ${warningsHtml}
                 <div class="settings-sync__preview-tabs">${tabsWithBadges}</div>
                 <div class="settings-sync__preview-content" data-container="diff-content">
                     ${renderDiffTable(diffs[allModules[0]], i18n, allModules[0])}
@@ -544,8 +553,8 @@ export function openPreviewDialog(
                     if (withBackup) {
                         await configManager.createAutoBackup(i18n.autoBackupPrefix || "Auto backup before apply");
                     }
-                    const applied = await configManager.applyProfile(profile.id, modules);
-                    showMessage(buildApplySuccessMessage(applied, i18n));
+                    const result = await configManager.applyProfile(profile.id, modules);
+                    showMessage(buildApplySuccessMessage(result, i18n));
                     dialog.destroy();
                 } catch (e: any) {
                     showMessage(`${i18n.applyFailed || "Apply failed"}: ${e.message}`);

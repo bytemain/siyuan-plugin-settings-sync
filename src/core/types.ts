@@ -68,6 +68,26 @@ export function isLiveApplyModule(mod: ConfigModule): boolean {
     return MODULE_LIVE_APPLY.has(mod);
 }
 
+/** Outcome of applying a profile via ConfigManager.applyProfile */
+export interface ApplyResult {
+    /** Modules whose settings were successfully applied */
+    applied: ConfigModule[];
+    /**
+     * Modules applied after migrating the payload across a SiYuan
+     * version boundary (currently only "ai", 3.6 openAI ↔ 3.8 providers).
+     * `toNewer` = profile from an older SiYuan applied on a newer one,
+     * `toOlder` = the reverse. Surfaced so the data reshaping is visible
+     * to the user in direction-appropriate wording.
+     */
+    migrated: { module: ConfigModule; direction: "toNewer" | "toOlder" }[];
+    /**
+     * Modules intentionally skipped because the profile payload could not
+     * be applied safely on this SiYuan version (e.g. an ai profile without
+     * any migratable provider on a ≤3.6 kernel).
+     */
+    skipped: ConfigModule[];
+}
+
 /** Platform display labels */
 export const PLATFORM_LABELS: Record<Platform, string> = {
     all: "All",

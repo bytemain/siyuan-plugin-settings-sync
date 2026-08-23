@@ -1,5 +1,6 @@
 import { Constants } from "siyuan";
 import {
+    ApplyResult,
     ConfigModule,
     CONFIG_MODULES,
     DEFAULT_SKIP_KEYS,
@@ -17,6 +18,7 @@ import { detectPlatform, getDeviceName } from "../utils/platform";
 import { generateUUID } from "../utils/uuid";
 import { filterCustomKeymap, isSparseKeymap, mergeKeymap } from "../utils/keymap";
 import { preserveLocalSkipKeys, setByPath, stripSkipKeys } from "../utils/skip-keys";
+import { isLegacyAI, isModernAI, migrateLegacyAI, migrateModernAIToLegacy } from "../utils/ai-migrate";
 
 /**
  * Read the saved UI layouts from the workspace local storage.
@@ -259,12 +261,12 @@ export class ConfigManager {
 
     /**
      * Apply a saved profile's configuration to the current device.
-     * Returns the list of modules that were successfully applied, so callers
-     * can show an accurate "may require restart" hint based on which modules
-     * actually got applied (vs being skipped because the profile didn't
-     * contain them).
+     * Returns an ApplyResult listing which modules were applied, which were
+     * migrated across a SiYuan version boundary, and which were skipped, so
+     * callers can show accurate restart / migration / skip hints (vs modules
+     * silently absent because the profile didn't contain them).
      */
-    async applyProfile(profileId: string, modules: ConfigModule[]): Promise<ConfigModule[]> {
+    async applyProfile(profileId: string, modules: ConfigModule[]): Promise<ApplyResult> {
         const profile = await this.getProfile(profileId);
         if (!profile) {
             throw new Error("Profile not found");
@@ -274,6 +276,8 @@ export class ConfigManager {
         const confData = await getConf();
         const errors: string[] = [];
         const applied: ConfigModule[] = [];
+        const migrated: { module: ConfigModule; direction: "toNewer" | "toOlder" }[] = [];
+        const skipped: ConfigModule[] = [];
 
         for (const mod of modules) {
             if (profile.conf[mod] !== undefined) {
@@ -285,6 +289,30 @@ export class ConfigManager {
                     if (mod === "keymap" && isSparseKeymap(dataToApply)) {
                         if (confData.conf && confData.conf.keymap) {
                             dataToApply = mergeKeymap(confData.conf.keymap, dataToApply);
+                        }
+                    }
+
+                    // For ai: SiYuan 3.8 restructured the module (ai.openAI →
+                    // ai.providers[] + per-scene sections). Migrate across the
+                    // boundary so a profile from the other shape doesn't get
+                    // dropped by the kernel or wipe local settings. See
+                    // utils/ai-migrate.ts for what is and isn't mappable.
+                    if (mod === "ai") {
+                        const localAI = confData.conf?.ai;
+                        if (isLegacyAI(dataToApply) && isModernAI(localAI)) {
+                            dataToApply = migrateLegacyAI(dataToApply, localAI);
+                            migrated.push({ module: mod, direction: "toNewer" });
+                        } else if (isModernAI(dataToApply) && isLegacyAI(localAI)) {
+                            const migratedAI = migrateModernAIToLegacy(dataToApply);
+                            if (!migratedAI) {
+                                // No usable provider/model in the profile — skip the
+                                // module instead of wiping the local AI settings.
+                                console.info("[settings-sync] Skipping ai module: profile has no migratable provider/model");
+                                skipped.push(mod);
+                                continue;
+                            }
+                            dataToApply = migratedAI;
+                            migrated.push({ module: mod, direction: "toOlder" });
                         }
                     }
 
@@ -327,7 +355,7 @@ export class ConfigManager {
             throw new Error(errors.join("; "));
         }
 
-        return applied;
+        return { applied, migrated, skipped };
     }
 
     /** Update an existing profile with the current device's configuration */
