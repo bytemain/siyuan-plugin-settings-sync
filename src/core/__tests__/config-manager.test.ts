@@ -122,6 +122,102 @@ describe("ConfigManager.applyProfile — appearance pre-flight", () => {
     });
 });
 
+describe("ConfigManager — ai module cross-version migration", () => {
+    it("migrates a legacy (≤3.6) profile into the modern shape on a ≥3.8 device", async () => {
+        const profile = {
+            id: "a1",
+            meta: { id: "a1", name: "n", platform: "all", createdAt: "", updatedAt: "", sourceDevice: "", siyuanVersion: "3.6.5", description: "" },
+            conf: {
+                ai: {
+                    openAI: {
+                        apiKey: "sk-legacy", apiBaseURL: "https://api.openai.com/v1", apiTimeout: 60,
+                        apiModel: "gpt-4o", apiTemperature: 0.7, apiMaxTokens: 4096,
+                    },
+                },
+            },
+        };
+        const mgr = installManagerWithProfile(profile);
+        apiMocks.getConf.mockResolvedValue({
+            conf: { ai: { providers: [], mcp: { servers: [{ name: "fs" }] } } },
+        });
+        apiMocks.setConfModule.mockResolvedValue(undefined);
+
+        await expect(mgr.applyProfile("a1", ["ai" as any])).resolves.toEqual(["ai"]);
+        const applied = apiMocks.setConfModule.mock.calls[0][1];
+        expect(applied.providers).toHaveLength(1);
+        expect(applied.providers[0]).toMatchObject({
+            apiKey: "sk-legacy",
+            baseURL: "https://api.openai.com/v1",
+            models: [{ name: "gpt-4o", enabled: true }],
+        });
+        expect(applied.agent.modelId).toBe("gpt-4o");
+        // Local-only sections survive the apply
+        expect(applied.mcp).toEqual({ servers: [{ name: "fs" }] });
+    });
+
+    it("migrates a modern (≥3.8) profile into the legacy shape on a ≤3.6 device", async () => {
+        const profile = {
+            id: "a2",
+            meta: { id: "a2", name: "n", platform: "all", createdAt: "", updatedAt: "", sourceDevice: "", siyuanVersion: "3.8.1", description: "" },
+            conf: {
+                ai: {
+                    providers: [{
+                        enabled: true, apiKey: "sk-modern", baseURL: "https://api.deepseek.com/v1", requestTimeout: 45,
+                        models: [{ name: "deepseek-chat", enabled: true }],
+                    }],
+                    editing: { temperature: 0.5, maxCompletionTokens: 2048 },
+                },
+            },
+        };
+        const mgr = installManagerWithProfile(profile);
+        // Local 3.6 device: openAI shape, and its apiKey must be preserved by
+        // the default skip key (ai.openAI.apiKey).
+        apiMocks.getConf.mockResolvedValue({
+            conf: { ai: { openAI: { apiKey: "local-36-key", apiModel: "gpt-3.5" } } },
+        });
+        apiMocks.setConfModule.mockResolvedValue(undefined);
+
+        await expect(mgr.applyProfile("a2", ["ai" as any])).resolves.toEqual(["ai"]);
+        const applied = apiMocks.setConfModule.mock.calls[0][1];
+        expect(applied.openAI).toMatchObject({
+            apiBaseURL: "https://api.deepseek.com/v1",
+            apiModel: "deepseek-chat",
+            apiTimeout: 45,
+            apiTemperature: 0.5,
+            apiMaxTokens: 2048,
+        });
+        expect(applied.openAI.apiKey).toBe("local-36-key");
+        expect(applied.providers).toBeUndefined();
+    });
+
+    it("skips the ai module when a modern profile has no migratable provider", async () => {
+        const profile = {
+            id: "a3",
+            meta: { id: "a3", name: "n", platform: "all", createdAt: "", updatedAt: "", sourceDevice: "", siyuanVersion: "3.8.1", description: "" },
+            conf: { ai: { providers: [] as any[] } },
+        };
+        const mgr = installManagerWithProfile(profile);
+        apiMocks.getConf.mockResolvedValue({ conf: { ai: { openAI: { apiKey: "k" } } } });
+
+        await expect(mgr.applyProfile("a3", ["ai" as any])).resolves.toEqual([]);
+        expect(apiMocks.setConfModule).not.toHaveBeenCalled();
+    });
+
+    it("applies as-is when profile and device share the same shape", async () => {
+        const profile = {
+            id: "a4",
+            meta: { id: "a4", name: "n", platform: "all", createdAt: "", updatedAt: "", sourceDevice: "", siyuanVersion: "3.8.1", description: "" },
+            conf: { ai: { providers: [{ enabled: true, baseURL: "https://x", models: [] as any[] }] } },
+        };
+        const mgr = installManagerWithProfile(profile);
+        apiMocks.getConf.mockResolvedValue({ conf: { ai: { providers: [] } } });
+        apiMocks.setConfModule.mockResolvedValue(undefined);
+
+        await expect(mgr.applyProfile("a4", ["ai" as any])).resolves.toEqual(["ai"]);
+        expect(apiMocks.setConfModule).toHaveBeenCalledWith("ai", expect.objectContaining({ providers: expect.any(Array) }));
+    });
+});
+
 describe("ConfigManager — layout module", () => {
     it("captureCurrentConf reads layouts from local storage, not conf.json", async () => {
         const mgr = new ConfigManager();

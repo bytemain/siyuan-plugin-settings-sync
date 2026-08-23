@@ -17,6 +17,7 @@ import { detectPlatform, getDeviceName } from "../utils/platform";
 import { generateUUID } from "../utils/uuid";
 import { filterCustomKeymap, isSparseKeymap, mergeKeymap } from "../utils/keymap";
 import { preserveLocalSkipKeys, setByPath, stripSkipKeys } from "../utils/skip-keys";
+import { isLegacyAI, isModernAI, migrateLegacyAI, migrateModernAIToLegacy } from "../utils/ai-migrate";
 
 /**
  * Read the saved UI layouts from the workspace local storage.
@@ -285,6 +286,27 @@ export class ConfigManager {
                     if (mod === "keymap" && isSparseKeymap(dataToApply)) {
                         if (confData.conf && confData.conf.keymap) {
                             dataToApply = mergeKeymap(confData.conf.keymap, dataToApply);
+                        }
+                    }
+
+                    // For ai: SiYuan 3.8 restructured the module (ai.openAI →
+                    // ai.providers[] + per-scene sections). Migrate across the
+                    // boundary so a profile from the other shape doesn't get
+                    // dropped by the kernel or wipe local settings. See
+                    // utils/ai-migrate.ts for what is and isn't mappable.
+                    if (mod === "ai") {
+                        const localAI = confData.conf?.ai;
+                        if (isLegacyAI(dataToApply) && isModernAI(localAI)) {
+                            dataToApply = migrateLegacyAI(dataToApply, localAI);
+                        } else if (isModernAI(dataToApply) && isLegacyAI(localAI)) {
+                            const migrated = migrateModernAIToLegacy(dataToApply);
+                            if (!migrated) {
+                                // No usable provider/model in the profile — skip the
+                                // module instead of wiping the local AI settings.
+                                console.info("[settings-sync] Skipping ai module: profile has no migratable provider/model");
+                                continue;
+                            }
+                            dataToApply = migrated;
                         }
                     }
 
