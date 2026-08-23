@@ -1,5 +1,5 @@
 import { fetchPost } from "siyuan";
-import { ConfigModule, MODULE_API_MAP } from "./types";
+import { ConfigModule, LOCAL_LAYOUTS_KEY, MODULE_API_MAP } from "./types";
 
 /**
  * Wrapper around SiYuan kernel APIs used by the settings sync plugin.
@@ -44,8 +44,24 @@ export async function getWorkspacePath(): Promise<string> {
  * mobile / HarmonyOS, where the kernel just reloads the page on
  * `setAppearance`) would see "apply succeeded" yet the theme would
  * still not match the saved profile — even after a restart.
+ * `layout` module: saved layouts live in the workspace local storage
+ * (`data/storage/local.json` under `local-layouts`), not in conf.json, so
+ * there is no `setLayout` endpoint. Applying writes the saved list back via
+ * /api/storage/setLocalStorageVal and patches `window.siyuan.storage` so the
+ * layout menu picks the entries up without a restart.
  */
 export function setConfModule(module: ConfigModule, data: any): Promise<void> {
+    if (module === "layout") {
+        const layouts = Array.isArray(data?.layouts) ? data.layouts : [];
+        return setLocalStorageVal(LOCAL_LAYOUTS_KEY, layouts).then(() => {
+            try {
+                syncWindowConfig(module, { layouts });
+            } catch (e) {
+                console.debug("[settings-sync] Failed to patch window.siyuan.storage:", e);
+            }
+        });
+    }
+
     const api = MODULE_API_MAP[module];
     // setKeymap expects the keymap wrapped in a "data" property
     const payload = module === "keymap" ? { data } : data;
@@ -188,6 +204,14 @@ export function syncWindowConfig(module: ConfigModule, data: any): void {
         return;
     }
     const win = (typeof window !== "undefined" ? window : undefined) as any;
+    if (module === "layout") {
+        const layouts = Array.isArray(data?.layouts) ? data.layouts : [];
+        const storage = win?.siyuan?.storage;
+        if (storage) {
+            storage[LOCAL_LAYOUTS_KEY] = layouts;
+        }
+        return;
+    }
     const cfg = win?.siyuan?.config;
     if (!cfg) {
         return;
@@ -272,6 +296,34 @@ export function removeFile(path: string): Promise<void> {
                 resolve();
             } else {
                 reject(new Error(response.msg || "Failed to remove file"));
+            }
+        });
+    });
+}
+
+/** Read the workspace local storage map (data/storage/local.json) via /api/storage/getLocalStorage */
+export function getLocalStorage(): Promise<Record<string, any>> {
+    return new Promise((resolve, reject) => {
+        fetchPost("/api/storage/getLocalStorage", {}, (response: any) => {
+            if (response && response.code === 0 && response.data && typeof response.data === "object") {
+                resolve(response.data as Record<string, any>);
+            } else if (response && response.code === 0) {
+                resolve({});
+            } else {
+                reject(new Error(response?.msg || "Failed to get local storage"));
+            }
+        });
+    });
+}
+
+/** Write a single key into the workspace local storage via /api/storage/setLocalStorageVal */
+export function setLocalStorageVal(key: string, val: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+        fetchPost("/api/storage/setLocalStorageVal", { key, val }, (response: any) => {
+            if (response && response.code === 0) {
+                resolve();
+            } else {
+                reject(new Error(response?.msg || `Failed to set local storage key "${key}"`));
             }
         });
     });

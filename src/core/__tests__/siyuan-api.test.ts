@@ -174,6 +174,51 @@ describe("setConfModule", () => {
     });
 });
 
+describe("setConfModule — layout module", () => {
+    it("writes layouts to local storage and patches window.siyuan.storage", async () => {
+        (globalThis as any).window = { siyuan: { config: {}, storage: {} } };
+        const layouts = [{ name: "work", time: 1, layout: { direction: "lr" } }];
+
+        fetchPostMock.mockImplementation((url: string, payload: any, cb: (r: any) => void) => {
+            expect(url).toBe("/api/storage/setLocalStorageVal");
+            expect(payload).toEqual({ key: "local-layouts", val: layouts });
+            cb({ code: 0 });
+        });
+
+        await expect(setConfModule("layout" as any, { layouts })).resolves.toBeUndefined();
+        expect((globalThis as any).window.siyuan.storage["local-layouts"]).toEqual(layouts);
+        // Must not touch window.siyuan.config — layouts don't live there
+        expect((globalThis as any).window.siyuan.config.layout).toBeUndefined();
+    });
+
+    it("applies an empty list when the profile carries no layouts key", async () => {
+        (globalThis as any).window = { siyuan: { storage: { "local-layouts": [{ name: "old" }] } } };
+
+        fetchPostMock.mockImplementation((url: string, payload: any, cb: (r: any) => void) => {
+            expect(url).toBe("/api/storage/setLocalStorageVal");
+            expect(payload).toEqual({ key: "local-layouts", val: [] });
+            cb({ code: 0 });
+        });
+
+        await expect(setConfModule("layout" as any, {})).resolves.toBeUndefined();
+        expect((globalThis as any).window.siyuan.storage["local-layouts"]).toEqual([]);
+    });
+
+    it("rejects with the kernel error message on failure", async () => {
+        fetchPostMock.mockImplementation((_url: string, _payload: any, cb: (r: any) => void) => {
+            cb({ code: -1, msg: "read only" });
+        });
+        await expect(setConfModule("layout" as any, { layouts: [] })).rejects.toThrow(/read only/);
+    });
+
+    it("does not throw when window.siyuan is unavailable", async () => {
+        fetchPostMock.mockImplementation((_url: string, _payload: any, cb: (r: any) => void) => {
+            cb({ code: 0 });
+        });
+        await expect(setConfModule("layout" as any, { layouts: [{ name: "x" }] })).resolves.toBeUndefined();
+    });
+});
+
 describe("getWorkspaces", () => {
     it("returns parsed workspace list on success", async () => {
         fetchPostMock.mockImplementation((_url: string, _payload: any, cb: (r: any) => void) => {
