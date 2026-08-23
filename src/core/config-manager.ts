@@ -276,7 +276,7 @@ export class ConfigManager {
         const confData = await getConf();
         const errors: string[] = [];
         const applied: ConfigModule[] = [];
-        const migrated: ConfigModule[] = [];
+        const migrated: { module: ConfigModule; direction: "toNewer" | "toOlder" }[] = [];
         const skipped: ConfigModule[] = [];
 
         for (const mod of modules) {
@@ -301,7 +301,7 @@ export class ConfigManager {
                         const localAI = confData.conf?.ai;
                         if (isLegacyAI(dataToApply) && isModernAI(localAI)) {
                             dataToApply = migrateLegacyAI(dataToApply, localAI);
-                            migrated.push(mod);
+                            migrated.push({ module: mod, direction: "toNewer" });
                         } else if (isModernAI(dataToApply) && isLegacyAI(localAI)) {
                             const migratedAI = migrateModernAIToLegacy(dataToApply);
                             if (!migratedAI) {
@@ -312,7 +312,7 @@ export class ConfigManager {
                                 continue;
                             }
                             dataToApply = migratedAI;
-                            migrated.push(mod);
+                            migrated.push({ module: mod, direction: "toOlder" });
                         }
                     }
 

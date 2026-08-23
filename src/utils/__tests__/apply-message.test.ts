@@ -5,7 +5,8 @@ const i18n = {
     applySuccess: "DEFAULT",
     applySuccessLive: "LIVE",
     applySuccessNeedsRestart: "RESTART: ${modules}",
-    applyMigratedNote: "MIGRATED: ${modules}",
+    applyMigratedToNewerNote: "TO-NEWER: ${modules}",
+    applyMigratedToOlderNote: "TO-OLDER: ${modules}",
     applySkippedNote: "SKIPPED: ${modules}",
     editor: "Editor",
     appearance: "Appearance",
@@ -14,8 +15,11 @@ const i18n = {
     ai: "AI",
 };
 
-const result = (applied: string[], migrated: string[] = [], skipped: string[] = []) =>
-    ({ applied, migrated, skipped }) as any;
+const result = (
+    applied: string[],
+    migrated: { module: string; direction: "toNewer" | "toOlder" }[] = [],
+    skipped: string[] = [],
+) => ({ applied, migrated, skipped }) as any;
 
 describe("buildApplySuccessMessage", () => {
     it("returns the live message when only live modules were applied", () => {
@@ -37,8 +41,11 @@ describe("buildApplySuccessMessage", () => {
         expect(msg).toContain("account");
     });
 
-    it("appends a migration note for modules migrated across SiYuan versions", () => {
-        expect(buildApplySuccessMessage(result(["ai"], ["ai"]), i18n)).toBe("RESTART: AI MIGRATED: AI");
+    it("uses direction-specific wording for migrated modules", () => {
+        expect(buildApplySuccessMessage(result(["ai"], [{ module: "ai", direction: "toNewer" }]), i18n))
+            .toBe("RESTART: AI TO-NEWER: AI");
+        expect(buildApplySuccessMessage(result(["ai"], [{ module: "ai", direction: "toOlder" }]), i18n))
+            .toBe("RESTART: AI TO-OLDER: AI");
     });
 
     it("appends a skip note for inapplicable modules", () => {
@@ -47,8 +54,10 @@ describe("buildApplySuccessMessage", () => {
     });
 
     it("falls back to built-in wording for the notes when i18n keys are missing", () => {
-        const msg = buildApplySuccessMessage(result(["ai"], ["ai"], ["keymap"]), {});
-        expect(msg).toContain("Migrated to this SiYuan version's config structure: ai");
-        expect(msg).toContain("skipped: keymap");
+        const msg = buildApplySuccessMessage(
+            result(["ai"], [{ module: "ai", direction: "toNewer" }], ["keymap"]), {},
+        );
+        expect(msg).toContain("converted to the new format: ai");
+        expect(msg).toContain("your existing settings were kept: keymap");
     });
 });

@@ -142,7 +142,7 @@ describe("ConfigManager — ai module cross-version migration", () => {
         });
         apiMocks.setConfModule.mockResolvedValue(undefined);
 
-        await expect(mgr.applyProfile("a1", ["ai" as any])).resolves.toMatchObject({ applied: ["ai"], migrated: ["ai"], skipped: [] });
+        await expect(mgr.applyProfile("a1", ["ai" as any])).resolves.toMatchObject({ applied: ["ai"], migrated: [{ module: "ai", direction: "toNewer" }], skipped: [] });
         const applied = apiMocks.setConfModule.mock.calls[0][1];
         expect(applied.providers).toHaveLength(1);
         expect(applied.providers[0]).toMatchObject({
@@ -177,7 +177,7 @@ describe("ConfigManager — ai module cross-version migration", () => {
         });
         apiMocks.setConfModule.mockResolvedValue(undefined);
 
-        await expect(mgr.applyProfile("a2", ["ai" as any])).resolves.toMatchObject({ applied: ["ai"], migrated: ["ai"], skipped: [] });
+        await expect(mgr.applyProfile("a2", ["ai" as any])).resolves.toMatchObject({ applied: ["ai"], migrated: [{ module: "ai", direction: "toOlder" }], skipped: [] });
         const applied = apiMocks.setConfModule.mock.calls[0][1];
         expect(applied.openAI).toMatchObject({
             apiBaseURL: "https://api.deepseek.com/v1",

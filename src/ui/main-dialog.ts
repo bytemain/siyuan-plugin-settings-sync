@@ -10,6 +10,7 @@ import { openSettingsDialog } from "./settings-dialog";
 import { openPushDialog } from "./push-dialog";
 import { RemoteProfileMeta, SyncTarget, WorkspaceSync } from "../core/workspace-sync";
 import { buildApplySuccessMessage } from "../utils/apply-message";
+import { buildCompatWarnings } from "../utils/compat-warning";
 
 /**
  * Open the main "Settings Sync Manager" dialog.
@@ -392,8 +393,12 @@ export function openMainDialog(
         const remote = remoteProfilesCache.find((p) => p.id === profileId);
         if (!remote) return;
 
-        const msg = (i18n.confirmApply || "Apply configuration \"${name}\" to current device?")
+        let msg = (i18n.confirmApply || "Apply configuration \"${name}\" to current device?")
             .replace("${name}", remote.name);
+        const warnings = buildCompatWarnings(remote, configManager.getDeviceInfo(), i18n);
+        if (warnings.length > 0) {
+            msg += "\n" + warnings.join("\n");
+        }
 
         confirm(i18n.applyDirectly || "Apply directly", msg, async () => {
             try {

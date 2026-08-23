@@ -36,15 +36,23 @@ export function buildApplySuccessMessage(result: ApplyResult, i18n: any): string
     }
 
     const notes: string[] = [];
-    if (result?.migrated?.length) {
-        const labels = result.migrated.map((m) => i18n?.[m] || m).join(", ");
-        notes.push((i18n?.applyMigratedNote
-            || "Migrated to this SiYuan version's config structure: ${modules}").replace("${modules}", labels));
+    const migrated = result?.migrated || [];
+    const toNewer = migrated.filter((m) => m.direction === "toNewer").map((m) => m.module);
+    const toOlder = migrated.filter((m) => m.direction === "toOlder").map((m) => m.module);
+    if (toNewer.length) {
+        const labels = toNewer.map((m) => i18n?.[m] || m).join(", ");
+        notes.push((i18n?.applyMigratedToNewerNote
+            || "These settings came from an older SiYuan and were converted to the new format: ${modules} (API keys, endpoints and models kept)").replace("${modules}", labels));
+    }
+    if (toOlder.length) {
+        const labels = toOlder.map((m) => i18n?.[m] || m).join(", ");
+        notes.push((i18n?.applyMigratedToOlderNote
+            || "These settings came from a newer SiYuan and the usable parts were converted: ${modules} (features that only exist in the newer version are unavailable here)").replace("${modules}", labels));
     }
     if (result?.skipped?.length) {
         const labels = result.skipped.map((m) => i18n?.[m] || m).join(", ");
         notes.push((i18n?.applySkippedNote
-            || "Not applicable on this SiYuan version, skipped: ${modules}").replace("${modules}", labels));
+            || "Incompatible with this SiYuan version, your existing settings were kept: ${modules}").replace("${modules}", labels));
     }
     return [base, ...notes].join(" ");
 }

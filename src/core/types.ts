@@ -75,9 +75,11 @@ export interface ApplyResult {
     /**
      * Modules applied after migrating the payload across a SiYuan
      * version boundary (currently only "ai", 3.6 openAI ↔ 3.8 providers).
-     * Surfaced to the user so the silent data reshaping is visible.
+     * `toNewer` = profile from an older SiYuan applied on a newer one,
+     * `toOlder` = the reverse. Surfaced so the data reshaping is visible
+     * to the user in direction-appropriate wording.
      */
-    migrated: ConfigModule[];
+    migrated: { module: ConfigModule; direction: "toNewer" | "toOlder" }[];
     /**
      * Modules intentionally skipped because the profile payload could not
      * be applied safely on this SiYuan version (e.g. an ai profile without
